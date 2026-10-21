@@ -1,1 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
 
+    <style name="Theme.KryptosBrowser" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/kryptos_primary</item>
+        <item name="colorPrimaryDark">@color/kryptos_primary_dark</item>
+        <item name="colorAccent">@color/kryptos_accent</item>
+        <item name="android:windowBackground">@color/kryptos_background</item>
+        <item name="android:statusBarColor">@color/kryptos_primary_dark</item>
+        <item name="android:navigationBarColor">@color/kryptos_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+</resources>
