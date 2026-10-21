@@ -1,1 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
 
+    <!-- Outer ring: shield / encloses the mark -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1A73E8"
+        android:strokeWidth="4"
+        android:pathData="M48,8 A40,40 0 1,1 47.99,8 Z" />
+
+    <!-- Inner letter K: vertical stem -->
+    <path
+        android:fillColor="#1A73E8"
+        android:pathData="M34,28 L42,28 L42,68 L34,68 Z" />
+
+    <!-- K: upper diagonal arm -->
+    <path
+        android:fillColor="#00BFA5"
+        android:pathData="M42,48 L60,28 L70,28 L50,48 Z" />
+
+    <!-- K: lower diagonal arm -->
+    <path
+        android:fillColor="#00BFA5"
+        android:pathData="M42,48 L50,48 L70,68 L60,68 Z" />
+
+</vector>
