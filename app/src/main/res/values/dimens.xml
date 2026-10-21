@@ -1,1 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
 
+    <!-- Spacing scale -->
+    <dimen name="space_xxs">2dp</dimen>
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">12dp</dimen>
+    <dimen name="space_lg">16dp</dimen>
+    <dimen name="space_xl">24dp</dimen>
+    <dimen name="space_xxl">32dp</dimen>
+
+    <!-- Toolbar -->
+    <dimen name="toolbar_height">56dp</dimen>
+    <dimen name="toolbar_horizontal_padding">@dimen/space_sm</dimen>
+
+    <!-- Address bar -->
+    <dimen name="address_bar_height">44dp</dimen>
+    <dimen name="address_bar_corner_radius">22dp</dimen>
+    <dimen name="address_bar_horizontal_padding">@dimen/space_md</dimen>
+    <dimen name="address_bar_text_size">15sp</dimen>
+
+    <!-- Navigation icons -->
+    <dimen name="nav_icon_size">24dp</dimen>
+    <dimen name="nav_icon_touch_size">40dp</dimen>
+    <dimen name="nav_icon_padding">@dimen/space_xs</dimen>
+
+    <!-- Progress bar -->
+    <dimen name="progress_bar_height">3dp</dimen>
+
+    <!-- Homepage -->
+    <dimen name="homepage_logo_size">80dp</dimen>
+    <dimen name="homepage_tagline_text_size">16sp</dimen>
+    <dimen name="homepage_title_text_size">28sp</dimen>
+    <dimen name="homepage_search_height">52dp</dimen>
+    <dimen name="homepage_search_corner_radius">26dp</dimen>
+
+    <!-- Error page -->
+    <dimen name="error_icon_size">64dp</dimen>
+    <dimen name="error_title_text_size">20sp</dimen>
+    <dimen name="error_message_text_size">14sp</dimen>
+    <dimen name="error_button_height">44dp</dimen>
+    <dimen name="error_button_corner_radius">22dp</dimen>
+    <dimen name="error_button_min_width">120dp</dimen>
+
+    <!-- Text sizes (general) -->
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="text_body">14sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+
+</resources>
