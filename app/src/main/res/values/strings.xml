@@ -1,1 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kryptos Browser</string>
 
+    <!-- Address bar -->
+    <string name="address_bar_hint">Search or enter address</string>
+    <string name="address_bar_description">Address and search bar</string>
+
+    <!-- Navigation buttons -->
+    <string name="btn_back">Back</string>
+    <string name="btn_forward">Forward</string>
+    <string name="btn_reload">Reload</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_home">Home</string>
+    <string name="btn_menu">More options</string>
+
+    <!-- Homepage -->
+    <string name="homepage_tagline">Browse without noise.</string>
+    <string name="homepage_search_hint">Search the web</string>
+
+    <!-- Menu items -->
+    <string name="menu_theme_toggle">Toggle dark mode</string>
+    <string name="menu_about">About Kryptos Browser</string>
+
+    <!-- Loading -->
+    <string name="loading">Loading…</string>
+
+    <!-- Error page -->
+    <string name="error_title">Couldn\'t load this page</string>
+    <string name="error_message_generic">Something went wrong while loading the page. Check your connection and try again.</string>
+    <string name="error_message_no_internet">No internet connection. Kryptos Browser needs an active connection to load websites.</string>
+    <string name="error_message_timeout">The connection timed out. The website took too long to respond.</string>
+    <string name="error_message_ssl">The website\'s security certificate could not be verified. For your safety, the page was not loaded.</string>
+    <string name="error_message_bad_url">That address doesn\'t look right. Check the spelling and try again.</string>
+    <string name="error_btn_retry">Try again</string>
+    <string name="error_btn_home">Go to homepage</string>
+
+    <!-- About dialog -->
+    <string name="about_title">About Kryptos Browser</string>
+    <string name="about_version_label">Version</string>
+    <string name="about_description">A lightweight, privacy-conscious Android browser built from scratch. Powered by Android WebView.</string>
+    <string name="about_close">Close</string>
+</resources>
