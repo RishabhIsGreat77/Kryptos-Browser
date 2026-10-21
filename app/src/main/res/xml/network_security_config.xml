@@ -1,1 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
 
+    <!-- Block all cleartext (plain HTTP) traffic.
+         Every website must use HTTPS. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust only the system's built-in certificate authorities.
+                 User-installed CAs are NOT trusted, so an attacker cannot
+                 silently add a fake CA to intercept traffic. -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Exception: localhost stays cleartext for local development only.
+         This does not affect normal web browsing. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+
+</network-security-config>
