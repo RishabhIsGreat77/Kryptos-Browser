@@ -1,1 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
 
+    <!-- K stem -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,32 L46,32 L46,76 L38,76 Z" />
+
+    <!-- K upper arm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,54 L64,32 L70,32 L52,54 Z" />
+
+    <!-- K lower arm -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,54 L52,54 L70,76 L64,76 Z" />
+
+</vector>
