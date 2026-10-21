@@ -1,1 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@color/kryptos_background"
+    android:padding="@dimen/space_xl">
 
+    <!-- Warning icon -->
+    <ImageView
+        android:id="@+id/error_icon"
+        android:layout_width="@dimen/error_icon_size"
+        android:layout_height="@dimen/error_icon_size"
+        android:src="@drawable/ic_kryptos_logo"
+        android:contentDescription="@null" />
+
+    <!-- Error title -->
+    <TextView
+        android:id="@+id/error_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:text="@string/error_title"
+        android:textColor="@color/kryptos_text_primary"
+        android:textSize="@dimen/error_title_text_size"
+        android:textStyle="bold"
+        android:gravity="center" />
+
+    <!-- Error message -->
+    <TextView
+        android:id="@+id/error_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_sm"
+        android:layout_marginHorizontal="@dimen/space_md"
+        android:text="@string/error_message_generic"
+        android:textColor="@color/kryptos_text_secondary"
+        android:textSize="@dimen/error_message_text_size"
+        android:gravity="center" />
+
+    <!-- Retry button -->
+    <Button
+        android:id="@+id/error_btn_retry"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/error_button_height"
+        android:layout_marginTop="@dimen/space_xl"
+        android:minWidth="@dimen/error_button_min_width"
+        android:paddingHorizontal="@dimen/space_lg"
+        android:text="@string/error_btn_retry"
+        android:textAllCaps="false"
+        android:textColor="@color/kryptos_text_on_primary"
+        android:textSize="@dimen/text_body"
+        android:backgroundTint="@color/kryptos_primary" />
+
+    <!-- Home button -->
+    <Button
+        android:id="@+id/error_btn_home"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/error_button_height"
+        android:layout_marginTop="@dimen/space_sm"
+        android:minWidth="@dimen/error_button_min_width"
+        android:paddingHorizontal="@dimen/space_lg"
+        android:text="@string/error_btn_home"
+        android:textAllCaps="false"
+        android:textColor="@color/kryptos_text_secondary"
+        android:textSize="@dimen/text_body"
+        android:background="@android:color/transparent" />
+
+</LinearLayout>
