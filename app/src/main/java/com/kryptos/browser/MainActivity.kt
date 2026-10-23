@@ -37,11 +37,23 @@ class MainActivity : AppCompatActivity() {
 
     private var lastFailedUrl: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    // Search Engines List
+    private val searchEngines = listOf(
+        Pair("Google", "https://www.google.com/search?q="),
+        Pair("Bing", "https://www.bing.com/search?q="),
+        Pair("DuckDuckGo", "https://duckduckgo.com/?q="),
+        Pair("Brave Search", "https://search.brave.com/search?q="),
+        Pair("Yahoo", "https://search.yahoo.com/search?p="),
+        Pair("Ecosia", "https://www.ecosia.org/search?q=")
+    )
+    
+    // Default is Google (index 0)
+    private var selectedEngineIndex = 0 
+    private lateinit var prefs: android.content.SharedPreferences
 
-        // Load theme preference before setting content view
-        val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
+        
         val isDark = prefs.getBoolean("dark_mode", false)
         if (isDark) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -49,9 +61,12 @@ class MainActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         }
 
+        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Bind UI elements
+        // Load saved default search engine
+        selectedEngineIndex = prefs.getInt("default_search_engine", 0)
+
         webView = findViewById(R.id.webview)
         addressBar = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
@@ -79,6 +94,8 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
+        // Custom User-Agent so websites know it's Kryptos Browser
+        settings.userAgentString = "KryptosBrowser/1.0 (Android)"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
@@ -97,8 +114,13 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home).setOnClickListener {
             showHomepage()
         }
-        
-        // Menu button setup
+
+        // Naya Button: Search Engine Selector
+        findViewById<ImageButton>(R.id.btn_search_engine).setOnClickListener { view ->
+            showSearchEngineMenu(view)
+        }
+
+        // Menu (Settings/About)
         findViewById<ImageButton>(R.id.btn_menu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
@@ -127,6 +149,25 @@ class MainActivity : AppCompatActivity() {
                 true
             } else false
         }
+    }
+
+    // Function to show the list of Search Engines
+    private fun showSearchEngineMenu(anchorView: View) {
+        val popup = PopupMenu(this, anchorView)
+        
+        for (i in searchEngines.indices) {
+            val engine = searchEngines[i]
+            val check = if (i == selectedEngineIndex) " ✓" else ""
+            popup.menu.add(0, i, i, engine.first + check)
+        }
+
+        popup.setOnMenuItemClickListener { item ->
+            selectedEngineIndex = item.itemId
+            // Temporarily change the engine for the *current search*
+            // (If you want to save it as default, we can add a setting later)
+            true
+        }
+        popup.show()
     }
 
     private fun setupHomepage() {
@@ -172,7 +213,9 @@ class MainActivity : AppCompatActivity() {
                 "https://$input"
             }
         } else {
-            "https://www.google.com/search?q=${Uri.encode(input)}"
+            // Use the selected search engine URL
+            val baseUrl = searchEngines[selectedEngineIndex].second
+            baseUrl + Uri.encode(input)
         }
 
         homepageContainer.visibility = View.GONE
@@ -190,10 +233,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleTheme() {
-        val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         val newMode = !isDark
-
         prefs.edit().putBoolean("dark_mode", newMode).apply()
 
         if (newMode) {
@@ -206,7 +247,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAboutDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.about_title)
-            .setMessage("${getString(R.string.about_description)}\n\n${getString(R.string.about_version_label)}: 1.0.0")
+            .setMessage("${getString(R.string.about_description)}\n\n${getString(R.string.about_version_label)}: 2.0.0-Draft")
             .setPositiveButton(R.string.about_close, null)
             .show()
     }
@@ -218,7 +259,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // Inner classes for WebView callbacks
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             return false
@@ -266,4 +306,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
