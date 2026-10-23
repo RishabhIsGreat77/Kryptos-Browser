@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Brand colors (dark mode) -->
-    <color name="kryptos_primary">#8AB4F8</color>
-    <color name="kryptos_primary_dark">#0B1B33</color>
-    <color name="kryptos_accent">#4DD0C4</color>
+    <!-- Premium Brand colors for Dark Mode (Vibrant Cyan) -->
+    <color name="kryptos_primary">#00E5FF</color>
+    <color name="kryptos_primary_dark">#0077B6</color>
+    <color name="kryptos_accent">#00E5FF</color>
 
-    <!-- Surfaces -->
-    <color name="kryptos_background">#121212</color>
-    <color name="kryptos_surface">#1E1E1E</color>
+    <!-- Obsidian Surfaces (Deep, rich blacks/greys) -->
+    <color name="kryptos_background">#0A0A0A</color>
+    <color name="kryptos_surface">#141414</color>
 
-    <!-- Text -->
-    <color name="kryptos_text_primary">#E8EAED</color>
+    <!-- Text (Soft White and Light Grey for readability) -->
+    <color name="kryptos_text_primary">#F8F9FA</color>
     <color name="kryptos_text_secondary">#9AA0A6</color>
-    <color name="kryptos_text_on_primary">#0A0A0A</color>
+    <color name="kryptos_text_on_primary">#000000</color>
 
-    <!-- Address bar -->
-    <color name="kryptos_address_bar_bg">#2A2A2A</color>
-    <color name="kryptos_address_bar_text">#E8EAED</color>
-    <color name="kryptos_address_bar_hint">#80868B</color>
+    <!-- Address bar (Slightly lighter than background for contrast) -->
+    <color name="kryptos_address_bar_bg">#1C1C1E</color>
+    <color name="kryptos_address_bar_text">#F8F9FA</color>
+    <color name="kryptos_address_bar_hint">#636366</color>
 
     <!-- Icons -->
-    <color name="kryptos_icon_tint">#9AA0A6</color>
+    <color name="kryptos_icon_tint">#F8F9FA</color>
 
     <!-- States -->
-    <color name="kryptos_error">#F28B82</color>
-    <color name="kryptos_divider">#2E2E2E</color>
+    <color name="kryptos_error">#FF453A</color>
+    <color name="kryptos_divider">#2C2C2E</color>
 
 </resources>
