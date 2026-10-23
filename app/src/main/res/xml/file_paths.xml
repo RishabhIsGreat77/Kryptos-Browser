@@ -1,1 +1,8 @@
-
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- APK ko cache folder mein save karne ki permission -->
+    <cache-path name="apk_cache" path="." />
+    
+    <!-- External cache folder ki permission (backup ke liye) -->
+    <external-cache-path name="apk_external_cache" path="." />
+</paths>
