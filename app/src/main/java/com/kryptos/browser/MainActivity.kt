@@ -1,10 +1,16 @@
 package com.kryptos.browser
 
 import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.app.ProgressDialog
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.webkit.WebChromeClient
@@ -19,10 +25,16 @@ import android.widget.ImageButton
 import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.FileProvider
+import org.json.JSONObject
+import java.io.File
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var homepageSearchInput: EditText
 
     private var lastFailedUrl: String? = null
+    private lateinit var prefs: android.content.SharedPreferences
 
     // Search Engines List
     private val searchEngines = listOf(
@@ -46,15 +59,12 @@ class MainActivity : AppCompatActivity() {
         Pair("Yahoo", "https://search.yahoo.com/search?p="),
         Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
-    
-    // Default is Google (index 0)
-    private var selectedEngineIndex = 0 
-    private lateinit var prefs: android.content.SharedPreferences
+    private var selectedEngineIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         
-        val isDark = prefs.getBoolean("dark_mode", false)
+        val isDark = prefs.getBoolean("dark_mode", true) // Default to Dark Mode for premium look
         if (isDark) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         } else {
@@ -64,7 +74,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Load saved default search engine
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
         webView = findViewById(R.id.webview)
@@ -81,6 +90,9 @@ class MainActivity : AppCompatActivity() {
         setupHomepage()
         setupErrorPage()
         setupBackPressHandler()
+
+        // GitHub Auto-Updater Check
+        checkForUpdates()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -94,8 +106,7 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        // Custom User-Agent so websites know it's Kryptos Browser
-        settings.userAgentString = "KryptosBrowser/1.0 (Android)"
+        settings.userAgentString = "KryptosBrowser/2.0 (Android)"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
@@ -115,12 +126,10 @@ class MainActivity : AppCompatActivity() {
             showHomepage()
         }
 
-        // Naya Button: Search Engine Selector
         findViewById<ImageButton>(R.id.btn_search_engine).setOnClickListener { view ->
             showSearchEngineMenu(view)
         }
 
-        // Menu (Settings/About)
         findViewById<ImageButton>(R.id.btn_menu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
@@ -143,28 +152,22 @@ class MainActivity : AppCompatActivity() {
         addressBar.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val input = addressBar.text.toString().trim()
-                if (input.isNotEmpty()) {
-                    loadUrlOrSearch(input)
-                }
+                if (input.isNotEmpty()) loadUrlOrSearch(input)
                 true
             } else false
         }
     }
 
-    // Function to show the list of Search Engines
     private fun showSearchEngineMenu(anchorView: View) {
         val popup = PopupMenu(this, anchorView)
-        
         for (i in searchEngines.indices) {
             val engine = searchEngines[i]
             val check = if (i == selectedEngineIndex) " ✓" else ""
             popup.menu.add(0, i, i, engine.first + check)
         }
-
         popup.setOnMenuItemClickListener { item ->
             selectedEngineIndex = item.itemId
-            // Temporarily change the engine for the *current search*
-            // (If you want to save it as default, we can add a setting later)
+            Toast.makeText(this, "${searchEngines[selectedEngineIndex].first} selected for this search", Toast.LENGTH_SHORT).show()
             true
         }
         popup.show()
@@ -207,15 +210,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadUrlOrSearch(input: String) {
         val url = if (input.contains(".") && !input.contains(" ")) {
-            if (input.startsWith("http://") || input.startsWith("https://")) {
-                input
-            } else {
-                "https://$input"
-            }
+            if (input.startsWith("http://") || input.startsWith("https://")) input
+            else "https://$input"
         } else {
-            // Use the selected search engine URL
-            val baseUrl = searchEngines[selectedEngineIndex].second
-            baseUrl + Uri.encode(input)
+            searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
 
         homepageContainer.visibility = View.GONE
@@ -233,44 +231,127 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleTheme() {
-        val isDark = prefs.getBoolean("dark_mode", false)
+        val isDark = prefs.getBoolean("dark_mode", true)
         val newMode = !isDark
         prefs.edit().putBoolean("dark_mode", newMode).apply()
-
-        if (newMode) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        }
+        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
     }
 
     private fun showAboutDialog() {
         AlertDialog.Builder(this)
             .setTitle(R.string.about_title)
-            .setMessage("${getString(R.string.about_description)}\n\n${getString(R.string.about_version_label)}: 2.0.0-Draft")
+            .setMessage("${getString(R.string.about_description)}\n\nVersion: 2.0.0")
             .setPositiveButton(R.string.about_close, null)
             .show()
     }
 
     override fun onDestroy() {
-        if (this::webView.isInitialized) {
-            webView.destroy()
-        }
+        if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
     }
 
-    inner class KryptosWebViewClient : WebViewClient() {
-        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-            return false
+    // ==========================================
+    // NAYA: AUTO-UPDATER LOGIC
+    // ==========================================
+
+    private fun checkForUpdates() {
+        Thread {
+            try {
+                val url = URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(response)
+                val latestVersionTag = json.getString("tag_name") // e.g. "v2.1.0"
+                
+                // Simple string stripping for version check
+                val latestVersion = latestVersionTag.replace("v", "")
+                val currentVersion = "2.0.0" // Current app version
+
+                if (latestVersion > currentVersion) {
+                    val downloadUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
+                    runOnUiThread {
+                        showUpdateDialog(latestVersion, downloadUrl)
+                    }
+                }
+            } catch (e: Exception) {
+                // Fail silently if no internet or rate limited
+            }
+        }.start()
+    }
+
+    private fun showUpdateDialog(version: String, downloadUrl: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Update Available")
+            .setMessage("A new version ($version) of Kryptos Browser is available. Update now to get the latest features.")
+            .setCancelable(false)
+            .setPositiveButton("Update Now") { _, _ ->
+                downloadAndInstallApk(downloadUrl)
+            }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
+    private fun downloadAndInstallApk(apkUrl: String) {
+        val progressDialog = ProgressDialog(this)
+        progressDialog.setMessage("Downloading update...")
+        progressDialog.setCancelable(false)
+        progressDialog.show()
+
+        Thread {
+            try {
+                val url = URL(apkUrl)
+                val connection = url.openConnection() as HttpsURLConnection
+                connection.connect()
+
+                val apkFile = File(externalCacheDir, "kryptos_update.apk")
+                connection.inputStream.use { input ->
+                    apkFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                runOnUiThread {
+                    progressDialog.dismiss()
+                    installApk(apkFile)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressDialog.dismiss()
+                    Toast.makeText(this, "Update failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun installApk(apkFile: File) {
+        // Agar Android 8.0+ hai, to permission check karega
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (!packageManager.canRequestPackageInstalls()) {
+                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+                Toast.makeText(this, "Please allow Kryptos to install updates, then click Update again.", Toast.LENGTH_LONG).show()
+                return
+            }
         }
+
+        val apkUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+    }
+
+    // WebView Clients
+    inner class KryptosWebViewClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            if (url != "about:blank") {
-                addressBar.setText(url)
-            } else {
-                addressBar.text.clear()
-            }
+            if (url != "about:blank") addressBar.setText(url) else addressBar.text.clear()
             errorContainer.visibility = View.GONE
         }
 
@@ -283,11 +364,9 @@ class MainActivity : AppCompatActivity() {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
                 val desc = error?.description?.toString() ?: "Unknown error"
-                val msg = getString(R.string.error_message_generic) + "\n\n($desc)"
                 lastFailedUrl = request.url.toString()
-                
                 errorTitle.text = getString(R.string.error_title)
-                errorMessage.text = msg
+                errorMessage.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
                 errorContainer.visibility = View.VISIBLE
                 homepageContainer.visibility = View.GONE
             }
