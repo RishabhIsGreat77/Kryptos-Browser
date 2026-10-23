@@ -5,19 +5,9 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- K stem -->
+    <!-- The White Minimalist 'K' -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,32 L46,32 L46,76 L38,76 Z" />
-
-    <!-- K upper arm -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,54 L64,32 L70,32 L52,54 Z" />
-
-    <!-- K lower arm -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M46,54 L52,54 L70,76 L64,76 Z" />
+        android:pathData="M32,26 L44,26 L44,50 L64,26 L78,26 L52,55 L80,84 L66,84 L44,58 L44,82 L32,82 Z" />
 
 </vector>
