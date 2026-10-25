@@ -5,84 +5,80 @@
     android:orientation="vertical"
     android:background="@color/kryptos_background">
 
-    <!-- ===== TOP TOOLBAR (Sci-Fi Minimal) ===== -->
+    <!-- TOP BAR (Address & Shield) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="@dimen/toolbar_height"
+        android:layout_height="56dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/space_sm"
-        android:background="@color/kryptos_background">
+        android:paddingHorizontal="16dp"
+        android:layout_marginTop="8dp">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_back"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_back" />
-
-        <ImageButton
-            android:id="@+id/btn_forward"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_forward"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_forward" />
-
-        <!-- Address Bar: Now gets full width -->
-        <EditText
-            android:id="@+id/address_bar"
+        <!-- Address Bar Pill -->
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="@dimen/address_bar_height"
+            android:layout_height="44dp"
             android:layout_weight="1"
-            android:layout_marginHorizontal="@dimen/space_xs"
-            android:background="@drawable/bg_homepage_search"
-            android:hint="@string/address_bar_hint"
-            android:textColorHint="@color/kryptos_address_bar_hint"
-            android:textColor="@color/kryptos_address_bar_text"
-            android:textSize="@dimen/address_bar_text_size"
-            android:paddingHorizontal="@dimen/space_md"
-            android:imeOptions="actionGo"
-            android:inputType="textUri"
-            android:maxLines="1"
-            android:singleLine="true"
-            android:contentDescription="@string/address_bar_description" />
+            android:background="@drawable/bg_address_bar_pill"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp">
 
+            <TextView
+                android:id="@+id/address_bar_text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="kryptos://home"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <ImageButton
+                android:id="@+id/btn_reload"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_reload"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/btn_reload" />
+        </LinearLayout>
+
+        <!-- Shield Icon -->
         <ImageButton
-            android:id="@+id/btn_menu"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_menu"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
+            android:id="@+id/btn_shield"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="12dp"
+            android:src="@drawable/ic_shield"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_menu" />
-
+            android:contentDescription="Privacy Shield" />
     </LinearLayout>
 
-    <!-- ===== Progress bar ===== -->
+    <!-- (Hidden Address EditText for actual typing, we will link this later) -->
+    <EditText
+        android:id="@+id/address_bar"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:visibility="invisible" />
+
+    <!-- Progress Bar -->
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/progress_bar_height"
+        android:layout_height="2dp"
         android:max="100"
         android:progress="0"
         android:progressTint="@color/kryptos_accent"
-        android:progressBackgroundTint="@android:color/transparent"
         android:visibility="gone" />
 
-    <!-- ===== Content Area ===== -->
+    <!-- MAIN CONTENT AREA -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
-
+        
         <WebView
             android:id="@+id/webview"
             android:layout_width="match_parent"
@@ -103,54 +99,62 @@
             android:visibility="gone">
             <include layout="@layout/layout_error_page" />
         </FrameLayout>
-
     </FrameLayout>
 
-    <!-- ===== BOTTOM TOOLBAR (Sci-Fi Aesthetic) ===== -->
+    <!-- BOTTOM NAVIGATION BAR -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center"
         android:background="@color/kryptos_surface"
-        android:elevation="4dp">
+        android:elevation="8dp"
+        android:paddingBottom="8dp">
 
-        <!-- Search Engine Selector -->
         <ImageButton
-            android:id="@+id/btn_search_engine"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:layout_marginHorizontal="@dimen/space_xl"
-            android:src="@drawable/ic_search_engine"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
+            android:id="@+id/btn_back"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/ic_back"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/search_engine_selector_desc" />
+            android:tint="@color/kryptos_icon_tint" />
 
-        <!-- Reload -->
         <ImageButton
-            android:id="@+id/btn_reload"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:layout_marginHorizontal="@dimen/space_xl"
-            android:src="@drawable/ic_reload"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
+            android:id="@+id/btn_forward"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/ic_forward"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_reload" />
+            android:tint="@color/kryptos_icon_tint" />
 
-        <!-- Home -->
         <ImageButton
             android:id="@+id/btn_home"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:layout_marginHorizontal="@dimen/space_xl"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
             android:src="@drawable/ic_home"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_home" />
+            android:tint="@color/kryptos_icon_tint" />
 
+        <ImageButton
+            android:id="@+id/btn_tabs"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/ic_tabs"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/kryptos_icon_tint" />
+
+        <ImageButton
+            android:id="@+id/btn_menu"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:src="@drawable/ic_menu_grid"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/kryptos_icon_tint" />
     </LinearLayout>
 
 </LinearLayout>
