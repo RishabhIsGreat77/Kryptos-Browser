@@ -1,60 +1,275 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="@color/kryptos_background"
-    android:padding="@dimen/space_xl">
+    android:fillViewport="true"
+    android:background="@color/kryptos_background">
 
-    <!-- Naya PNG Logo (Automatically switches for Light/Dark mode) -->
-    <ImageView
-        android:id="@+id/homepage_logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:src="@drawable/home_logo"
-        android:contentDescription="@string/app_name" />
-
-    <!-- App Name: Sci-Fi style with letter spacing -->
-    <TextView
-        android:id="@+id/homepage_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_lg"
-        android:text="@string/app_name"
-        android:textColor="@color/kryptos_text_primary"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.15"
-        android:textAllCaps="true" />
-
-    <!-- Tagline -->
-    <TextView
-        android:id="@+id/homepage_tagline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_xs"
-        android:text="@string/homepage_tagline"
-        android:textColor="@color/kryptos_text_secondary"
-        android:textSize="14sp"
-        android:letterSpacing="0.05" />
-
-    <!-- Search Box -->
-    <EditText
-        android:id="@+id/homepage_search_input"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="@dimen/homepage_search_height"
-        android:layout_marginTop="@dimen/space_xxl"
-        android:layout_marginHorizontal="@dimen/space_md"
-        android:background="@drawable/bg_homepage_search"
-        android:hint="@string/homepage_search_hint"
-        android:textColorHint="@color/kryptos_address_bar_hint"
-        android:textColor="@color/kryptos_address_bar_text"
-        android:textSize="@dimen/address_bar_text_size"
-        android:paddingHorizontal="@dimen/space_lg"
-        android:imeOptions="actionGo"
-        android:inputType="textUri"
-        android:maxLines="1"
-        android:singleLine="true" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="40dp">
 
-</LinearLayout>
+        <!-- Sci-Fi Orbital Logo -->
+        <ImageView
+            android:id="@+id/homepage_logo"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/ic_kryptos_logo"
+            android:contentDescription="Kryptos Logo" />
+
+        <!-- Wordmark: kryptos (lowercase, premium font) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:text="kryptos"
+            android:textColor="@color/kryptos_text_primary"
+            android:textSize="32sp"
+            android:letterSpacing="0.05"
+            android:textStyle="normal" />
+
+        <!-- Search Bar Pill -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="32dp"
+            android:background="@drawable/bg_homepage_search"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_search_engine"
+                android:tint="@color/kryptos_text_secondary" />
+
+            <EditText
+                android:id="@+id/homepage_search_input"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:background="@android:color/transparent"
+                android:hint="Search or type URL..."
+                android:textColorHint="@color/kryptos_text_secondary"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="15sp"
+                android:imeOptions="actionGo"
+                android:inputType="textUri"
+                android:maxLines="1" />
+
+            <!-- Small icon for voice/mic (decorative) -->
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_menu"
+                android:tint="@color/kryptos_text_secondary" />
+        </LinearLayout>
+
+        <!-- Engine Switcher Text -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Engine: DuckDuckGo"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btn_switch_engine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Switch"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Favorites Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Favorites"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+ Add"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Speed Dial Grid (4 Columns) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- Item 1 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="DuckDuckGo"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Item 2 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GitHub"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Item 3 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="YouTube"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Item 4 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reddit"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Privacy Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Privacy"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Clear Data"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Privacy Shield Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_shield"
+                android:tint="@color/kryptos_text_primary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Privacy Shield Active"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="74 Trackers Blocked"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Toggle Switch -->
+            <Switch
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
