@@ -4,13 +4,13 @@
     android:layout_height="match_parent"
     android:background="@color/kryptos_background">
 
-    <!-- Logo in the center -->
+    <!-- Splash Logo: Black background with White K -->
     <ImageView
         android:id="@+id/splash_logo"
         android:layout_width="140dp"
         android:layout_height="140dp"
         android:layout_centerInParent="true"
-        android:src="@drawable/kryptos_logo"
+        android:src="@drawable/splash_logo"
         android:contentDescription="@string/app_name" />
 
     <!-- App name below logo with Sci-Fi spacing -->
