@@ -10,12 +10,12 @@
     <!-- Logo -->
     <ImageView
         android:id="@+id/homepage_logo"
-        android:layout_width="@dimen/homepage_logo_size"
-        android:layout_height="@dimen/homepage_logo_size"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
         android:src="@drawable/ic_kryptos_logo"
         android:contentDescription="@string/app_name" />
 
-    <!-- App name -->
+    <!-- App Name: Sci-Fi style with letter spacing -->
     <TextView
         android:id="@+id/homepage_title"
         android:layout_width="wrap_content"
@@ -23,8 +23,10 @@
         android:layout_marginTop="@dimen/space_lg"
         android:text="@string/app_name"
         android:textColor="@color/kryptos_text_primary"
-        android:textSize="@dimen/homepage_title_text_size"
-        android:textStyle="bold" />
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:textAllCaps="true" />
 
     <!-- Tagline -->
     <TextView
@@ -34,9 +36,10 @@
         android:layout_marginTop="@dimen/space_xs"
         android:text="@string/homepage_tagline"
         android:textColor="@color/kryptos_text_secondary"
-        android:textSize="@dimen/homepage_tagline_text_size" />
+        android:textSize="14sp"
+        android:letterSpacing="0.05" />
 
-    <!-- Search box -->
+    <!-- Search Box -->
     <EditText
         android:id="@+id/homepage_search_input"
         android:layout_width="match_parent"
