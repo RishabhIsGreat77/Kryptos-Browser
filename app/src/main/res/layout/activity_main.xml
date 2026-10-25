@@ -5,14 +5,13 @@
     android:orientation="vertical"
     android:background="@color/kryptos_background">
 
-    <!-- ===== Toolbar ===== -->
+    <!-- ===== TOP TOOLBAR (Sci-Fi Minimal) ===== -->
     <LinearLayout
-        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/toolbar_height"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/space_xs"
+        android:paddingHorizontal="@dimen/space_sm"
         android:background="@color/kryptos_background">
 
         <ImageButton
@@ -35,6 +34,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/btn_forward" />
 
+        <!-- Address Bar: Now gets full width -->
         <EditText
             android:id="@+id/address_bar"
             android:layout_width="0dp"
@@ -46,43 +46,12 @@
             android:textColorHint="@color/kryptos_address_bar_hint"
             android:textColor="@color/kryptos_address_bar_text"
             android:textSize="@dimen/address_bar_text_size"
-            android:paddingHorizontal="@dimen/address_bar_horizontal_padding"
+            android:paddingHorizontal="@dimen/space_md"
             android:imeOptions="actionGo"
             android:inputType="textUri"
             android:maxLines="1"
             android:singleLine="true"
             android:contentDescription="@string/address_bar_description" />
-
-        <!-- NAYA BUTTON: Search Engine Selector -->
-        <ImageButton
-            android:id="@+id/btn_search_engine"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_search_engine"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/search_engine_selector_desc" />
-
-        <ImageButton
-            android:id="@+id/btn_reload"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_reload"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_reload" />
-
-        <ImageButton
-            android:id="@+id/btn_home"
-            android:layout_width="@dimen/nav_icon_touch_size"
-            android:layout_height="@dimen/nav_icon_touch_size"
-            android:src="@drawable/ic_home"
-            android:padding="@dimen/nav_icon_padding"
-            android:scaleType="fitCenter"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_home" />
 
         <ImageButton
             android:id="@+id/btn_menu"
@@ -108,40 +77,80 @@
         android:progressBackgroundTint="@android:color/transparent"
         android:visibility="gone" />
 
-    <!-- ===== Content area (three layered screens) ===== -->
+    <!-- ===== Content Area ===== -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- Layer 1: WebView -->
         <WebView
             android:id="@+id/webview"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Layer 2: Homepage overlay -->
         <FrameLayout
             android:id="@+id/homepage_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="visible">
-
             <include layout="@layout/layout_homepage" />
-
         </FrameLayout>
 
-        <!-- Layer 3: Error overlay -->
         <FrameLayout
             android:id="@+id/error_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone">
-
             <include layout="@layout/layout_error_page" />
-
         </FrameLayout>
 
     </FrameLayout>
+
+    <!-- ===== BOTTOM TOOLBAR (Sci-Fi Aesthetic) ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@color/kryptos_surface"
+        android:elevation="4dp">
+
+        <!-- Search Engine Selector -->
+        <ImageButton
+            android:id="@+id/btn_search_engine"
+            android:layout_width="@dimen/nav_icon_touch_size"
+            android:layout_height="@dimen/nav_icon_touch_size"
+            android:layout_marginHorizontal="@dimen/space_xl"
+            android:src="@drawable/ic_search_engine"
+            android:padding="@dimen/nav_icon_padding"
+            android:scaleType="fitCenter"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/search_engine_selector_desc" />
+
+        <!-- Reload -->
+        <ImageButton
+            android:id="@+id/btn_reload"
+            android:layout_width="@dimen/nav_icon_touch_size"
+            android:layout_height="@dimen/nav_icon_touch_size"
+            android:layout_marginHorizontal="@dimen/space_xl"
+            android:src="@drawable/ic_reload"
+            android:padding="@dimen/nav_icon_padding"
+            android:scaleType="fitCenter"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/btn_reload" />
+
+        <!-- Home -->
+        <ImageButton
+            android:id="@+id/btn_home"
+            android:layout_width="@dimen/nav_icon_touch_size"
+            android:layout_height="@dimen/nav_icon_touch_size"
+            android:layout_marginHorizontal="@dimen/space_xl"
+            android:src="@drawable/ic_home"
+            android:padding="@dimen/nav_icon_padding"
+            android:scaleType="fitCenter"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/btn_home" />
+
+    </LinearLayout>
 
 </LinearLayout>
