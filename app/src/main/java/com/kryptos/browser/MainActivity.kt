@@ -1,17 +1,16 @@
 package com.kryptos.browser
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
-import android.app.DownloadManager
 import android.app.ProgressDialog
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -22,6 +21,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -39,7 +39,8 @@ import javax.net.ssl.HttpsURLConnection
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var addressBar: EditText
+    private lateinit var addressBarText: TextView
+    private lateinit var addressBarEdit: EditText
     private lateinit var progressBar: ProgressBar
     private lateinit var homepageContainer: FrameLayout
     private lateinit var errorContainer: FrameLayout
@@ -50,7 +51,6 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
-    // Search Engines List
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
@@ -64,7 +64,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         
-        val isDark = prefs.getBoolean("dark_mode", true) // Default to Dark Mode for premium look
+        // Default to Dark Mode for premium look
+        val isDark = prefs.getBoolean("dark_mode", true) 
         if (isDark) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         } else {
@@ -76,8 +77,10 @@ class MainActivity : AppCompatActivity() {
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
+        // Bind UI
         webView = findViewById(R.id.webview)
-        addressBar = findViewById(R.id.address_bar)
+        addressBarText = findViewById(R.id.address_bar_text)
+        addressBarEdit = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
@@ -90,9 +93,19 @@ class MainActivity : AppCompatActivity() {
         setupHomepage()
         setupErrorPage()
         setupBackPressHandler()
+        setupAnimations()
 
-        // GitHub Auto-Updater Check
         checkForUpdates()
+    }
+
+    private fun setupAnimations() {
+        // Rotate the orbital logo continuously
+        val logo = findViewById<ImageView>(R.id.homepage_logo)
+        val rotateAnimator = ObjectAnimator.ofFloat(logo, "rotation", 0f, 360f)
+        rotateAnimator.duration = 10000 // 10 seconds per rotation
+        rotateAnimator.repeatCount = ValueAnimator.INFINITE
+        rotateAnimator.interpolator = LinearInterpolator()
+        rotateAnimator.start()
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -125,14 +138,27 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home).setOnClickListener {
             showHomepage()
         }
+        findViewById<ImageButton>(R.id.btn_tabs).setOnClickListener {
+            Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
+        }
+        findViewById<ImageButton>(R.id.btn_shield).setOnClickListener {
+            Toast.makeText(this, "Privacy Shield Active. 0 Trackers Blocked.", Toast.LENGTH_SHORT).show()
+        }
 
-        findViewById<ImageButton>(R.id.btn_search_engine).setOnClickListener { view ->
-            showSearchEngineMenu(view)
+        // Make Address Bar Text clickable to type a new URL
+        addressBarText.setOnClickListener {
+            showAddressDialog()
         }
 
         findViewById<ImageButton>(R.id.btn_menu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
+            
+            // Fix Dark Mode Text dynamically
+            val isDark = prefs.getBoolean("dark_mode", true)
+            val themeMenuItem = popup.menu.findItem(R.id.action_theme)
+            themeMenuItem.title = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
+
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.action_theme -> {
@@ -148,29 +174,22 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
-
-        addressBar.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_GO) {
-                val input = addressBar.text.toString().trim()
-                if (input.isNotEmpty()) loadUrlOrSearch(input)
-                true
-            } else false
-        }
     }
 
-    private fun showSearchEngineMenu(anchorView: View) {
-        val popup = PopupMenu(this, anchorView)
-        for (i in searchEngines.indices) {
-            val engine = searchEngines[i]
-            val check = if (i == selectedEngineIndex) " ✓" else ""
-            popup.menu.add(0, i, i, engine.first + check)
-        }
-        popup.setOnMenuItemClickListener { item ->
-            selectedEngineIndex = item.itemId
-            Toast.makeText(this, "${searchEngines[selectedEngineIndex].first} selected for this search", Toast.LENGTH_SHORT).show()
-            true
-        }
-        popup.show()
+    private fun showAddressDialog() {
+        val input = EditText(this)
+        input.setText(if (webView.url == "about:blank") "" else webView.url)
+        input.setSelection(input.text.length)
+        
+        AlertDialog.Builder(this)
+            .setTitle("Enter URL or Search")
+            .setView(input)
+            .setPositiveButton("Go") { _, _ ->
+                val url = input.text.toString().trim()
+                if (url.isNotEmpty()) loadUrlOrSearch(url)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupHomepage() {
@@ -183,6 +202,22 @@ class MainActivity : AppCompatActivity() {
                 }
                 true
             } else false
+        }
+
+        // Hook up the "Switch" text in homepage
+        findViewById<TextView>(R.id.btn_switch_engine).setOnClickListener { view ->
+            val popup = PopupMenu(this, view)
+            for (i in searchEngines.indices) {
+                val check = if (i == selectedEngineIndex) " ✓" else ""
+                popup.menu.add(0, i, i, searchEngines[i].first + check)
+            }
+            popup.setOnMenuItemClickListener { item ->
+                selectedEngineIndex = item.itemId
+                prefs.edit().putInt("default_search_engine", selectedEngineIndex).apply()
+                Toast.makeText(this, "${searchEngines[selectedEngineIndex].first} selected", Toast.LENGTH_SHORT).show()
+                true
+            }
+            popup.show()
         }
     }
 
@@ -218,7 +253,6 @@ class MainActivity : AppCompatActivity() {
 
         homepageContainer.visibility = View.GONE
         errorContainer.visibility = View.GONE
-        addressBar.setText(url)
         webView.loadUrl(url)
     }
 
@@ -226,15 +260,17 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("about:blank")
         homepageContainer.visibility = View.VISIBLE
         errorContainer.visibility = View.GONE
-        addressBar.text.clear()
+        addressBarText.text = "kryptos://home"
         progressBar.visibility = View.GONE
     }
 
     private fun toggleTheme() {
         val isDark = prefs.getBoolean("dark_mode", true)
         val newMode = !isDark
+        // Save FIRST, then recreate
         prefs.edit().putBoolean("dark_mode", newMode).apply()
         AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+        recreate()
     }
 
     private fun showAboutDialog() {
@@ -250,10 +286,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // ==========================================
-    // NAYA: AUTO-UPDATER LOGIC
-    // ==========================================
-
+    // Auto-Updater Logic
     private fun checkForUpdates() {
         Thread {
             try {
@@ -262,21 +295,15 @@ class MainActivity : AppCompatActivity() {
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
-                val latestVersionTag = json.getString("tag_name") // e.g. "v2.1.0"
-                
-                // Simple string stripping for version check
+                val latestVersionTag = json.getString("tag_name")
                 val latestVersion = latestVersionTag.replace("v", "")
-                val currentVersion = "2.0.0" // Current app version
+                val currentVersion = "2.0.0"
 
                 if (latestVersion > currentVersion) {
                     val downloadUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
-                    runOnUiThread {
-                        showUpdateDialog(latestVersion, downloadUrl)
-                    }
+                    runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
                 }
-            } catch (e: Exception) {
-                // Fail silently if no internet or rate limited
-            }
+            } catch (e: Exception) { }
         }.start()
     }
 
@@ -285,9 +312,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Update Available")
             .setMessage("A new version ($version) of Kryptos Browser is available. Update now to get the latest features.")
             .setCancelable(false)
-            .setPositiveButton("Update Now") { _, _ ->
-                downloadAndInstallApk(downloadUrl)
-            }
+            .setPositiveButton("Update Now") { _, _ -> downloadAndInstallApk(downloadUrl) }
             .setNegativeButton("Later", null)
             .show()
     }
@@ -306,9 +331,7 @@ class MainActivity : AppCompatActivity() {
 
                 val apkFile = File(externalCacheDir, "kryptos_update.apk")
                 connection.inputStream.use { input ->
-                    apkFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                    apkFile.outputStream().use { output -> input.copyTo(output) }
                 }
 
                 runOnUiThread {
@@ -325,7 +348,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun installApk(apkFile: File) {
-        // Agar Android 8.0+ hai, to permission check karega
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!packageManager.canRequestPackageInstalls()) {
                 val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
@@ -335,7 +357,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
-
         val apkUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(apkUri, "application/vnd.android.package-archive")
@@ -345,21 +366,21 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // WebView Clients
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
-
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            if (url != "about:blank") addressBar.setText(url) else addressBar.text.clear()
+            if (url != "about:blank") {
+                addressBarText.text = url
+            } else {
+                addressBarText.text = "kryptos://home"
+            }
             errorContainer.visibility = View.GONE
         }
-
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar.visibility = View.GONE
         }
-
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
