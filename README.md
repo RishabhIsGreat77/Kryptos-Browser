@@ -1,15 +1,15 @@
 # Kryptos Browser
 
-A lightweight, privacy-conscious Android web browser built from scratch. Powered by Android WebView.
+A lightweight, ultra-minimal, and privacy-conscious Android web browser. Built with a premium Sci-Fi aesthetic and native Android WebView.
 
-## Features (V1)
+## Features (V2)
 
-- Clean and minimal homepage
-- Fast URL and search handling
-- Dedicated light and dark themes (persistent)
-- Basic navigation (Back, Forward, Reload, Home)
-- Helpful error pages for network and SSL issues
-- Secure: Cleartext HTTP is blocked by default
+- **Premium Sci-Fi UI:** Deep matte dark theme (#0B0B0D) with elegant cyan accents, minimal search layout, and a unique rotating orbital logo.
+- **Native Performance:** Powered by Android WebView with hardware-accelerated rendering.
+- **Seamless Splash Screen:** Custom premium intro screen.
+- **Smart Search Engine Switcher:** Choose between 6 major engines (Google, Bing, DuckDuckGo, Brave, Yahoo, Ecosia) on the fly.
+- **Auto-Updater:** Integrated with GitHub Releases API. The app automatically checks for new versions and prompts the user to update seamlessly, without leaving the app or visiting a browser.
+- **Secure & Private:** Cleartext HTTP traffic is strictly blocked. Privacy Shield design elements included (Coming soon: actual tracker blocking).
 
 ## Installation (For Users)
 
@@ -19,7 +19,7 @@ You do not need any development tools to use Kryptos Browser.
 2. Download the latest `Kryptos-Browser-vX.Y.Z.apk` file.
 3. Open the APK on your Android device.
 4. If prompted, allow your browser or file manager to "Install unknown apps".
-5. Install and open Kryptos Browser.
+5. Install and open Kryptos Browser. Future updates will be handled automatically by the app itself!
 
 ## Building from Source (For Developers)
 
@@ -35,9 +35,10 @@ If you want to build locally:
 
 - **Language:** Kotlin
 - **Engine:** Android WebView
-- **UI:** Native Android XML (Light / Dark modes)
-- **Build System:** Gradle
+- **UI:** Native Android XML (Sci-Fi Minimal Design)
+- **Auto-Updater:** Custom Github API integration (No third-party libraries)
+- **Build System:** Gradle + GitHub Actions
 
 ## Disclaimer
 
-Private browsing mode or tracking protection (coming in future versions) does not make you completely anonymous. Websites, internet providers, and network administrators may still see your activity.
+Private browsing mode or tracking protection does not make you completely anonymous. Websites, internet providers, and network administrators may still see your activity. The "Privacy Shield" is currently a UI representation; full network-level tracker blocking is planned for a future version.
