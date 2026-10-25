@@ -7,12 +7,12 @@
     android:background="@color/kryptos_background"
     android:padding="@dimen/space_xl">
 
-    <!-- Naya PNG Logo -->
+    <!-- Naya PNG Logo (Automatically switches for Light/Dark mode) -->
     <ImageView
         android:id="@+id/homepage_logo"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:src="@drawable/kryptos_logo"
+        android:src="@drawable/home_logo"
         android:contentDescription="@string/app_name" />
 
     <!-- App Name: Sci-Fi style with letter spacing -->
