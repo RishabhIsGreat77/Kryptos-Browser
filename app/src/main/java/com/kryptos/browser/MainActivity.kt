@@ -65,8 +65,12 @@ class MainActivity : AppCompatActivity() {
     private var selectedEngineIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. Call super.onCreate FIRST to avoid crash
+        super.onCreate(savedInstanceState)
+
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         
+        // 2. Set Theme safely
         val isDark = prefs.getBoolean("dark_mode", true) 
         if (isDark) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -74,12 +78,11 @@ class MainActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         }
 
-        super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
-        // Bind UI - Carefully matched with layout IDs
+        // Bind UI safely
         webView = findViewById(R.id.webview)
         addressBarText = findViewById(R.id.address_bar_text)
         progressBar = findViewById(R.id.progress_bar)
@@ -135,39 +138,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
             if (webView.canGoBack()) webView.goBack()
         }
-        findViewById<ImageButton>(R.id.btn_forward).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener {
             if (webView.canGoForward()) webView.goForward()
         }
-        findViewById<ImageButton>(R.id.btn_reload).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener {
             if (webView.url != null) webView.reload()
         }
-        findViewById<ImageButton>(R.id.btn_home).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepage()
         }
-        findViewById<ImageButton>(R.id.btn_tabs).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
             Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
         }
         
-        // Privacy Shield Top Button -> Clear Data
-        findViewById<ImageButton>(R.id.btn_shield).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_shield)?.setOnClickListener {
             showClearDataDialog()
         }
 
-        // Homepage Privacy Card -> Clear Data
-        findViewById<LinearLayout>(R.id.card_privacy_shield).setOnClickListener {
+        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
             showClearDataDialog()
         }
 
-        // Make Address Bar Text clickable to type a new URL
-        addressBarText.setOnClickListener {
+        addressBarText?.setOnClickListener {
             showAddressDialog()
         }
 
-        // Menu Button (Dark Mode & About)
-        findViewById<ImageButton>(R.id.btn_menu).setOnClickListener { view ->
+        findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
             
@@ -232,7 +231,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupHomepage() {
-        homepageSearchInput.setOnEditorActionListener { _, actionId, _ ->
+        homepageSearchInput?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val input = homepageSearchInput.text.toString().trim()
                 if (input.isNotEmpty()) {
@@ -243,8 +242,7 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        // Engine Switcher on Homepage
-        findViewById<TextView>(R.id.btn_switch_engine).setOnClickListener { view ->
+        findViewById<TextView>(R.id.btn_switch_engine)?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             for (i in searchEngines.indices) {
                 val check = if (i == selectedEngineIndex) " ✓" else ""
@@ -262,10 +260,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupErrorPage() {
-        findViewById<Button>(R.id.error_btn_retry).setOnClickListener {
+        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
             lastFailedUrl?.let { loadUrlOrSearch(it) }
         }
-        findViewById<Button>(R.id.error_btn_home).setOnClickListener {
+        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
             showHomepage()
         }
     }
