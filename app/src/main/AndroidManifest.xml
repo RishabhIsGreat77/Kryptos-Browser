@@ -4,7 +4,7 @@
     <!-- Internet Permission -->
     <uses-permission android:name="android.permission.INTERNET" />
     
-    <!-- NAYA: App ko khud ko update karne ki permission -->
+    <!-- App ko khud ko update karne ki permission -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -17,18 +17,25 @@
         android:theme="@style/Theme.KryptosBrowser"
         android:usesCleartextTraffic="false">
 
+        <!-- NAYA: SplashActivity ab LAUNCHER ban gayi hai -->
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:launchMode="singleTask">
+            android:theme="@style/Theme.KryptosBrowser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- NAYA: FileProvider (APK install karne ke liye zaroori hai) -->
+        <!-- MainActivity ab normal activity hai -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTask" />
+
+        <!-- FileProvider (APK install karne ke liye zaroori hai) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
