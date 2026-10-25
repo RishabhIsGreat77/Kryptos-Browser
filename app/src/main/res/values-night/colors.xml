@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Premium Brand colors for Dark Mode (Vibrant Cyan) -->
-    <color name="kryptos_primary">#00E5FF</color>
-    <color name="kryptos_primary_dark">#0077B6</color>
-    <color name="kryptos_accent">#00E5FF</color>
+    <!-- Brand colors (Minimal White/Blue Accent) -->
+    <color name="kryptos_primary">#3B82F6</color>
+    <color name="kryptos_primary_dark">#1E3A8A</color>
+    <color name="kryptos_accent">#60A5FA</color>
 
-    <!-- Obsidian Surfaces (Deep, rich blacks/greys) -->
-    <color name="kryptos_background">#0A0A0A</color>
-    <color name="kryptos_surface">#141414</color>
+    <!-- Obsidian Surfaces (Exact Gemini Prompt) -->
+    <color name="kryptos_background">#0B0B0D</color>
+    <color name="kryptos_surface">#141418</color>
+    <color name="kryptos_border">#242429</color>
 
-    <!-- Text (Soft White and Light Grey for readability) -->
-    <color name="kryptos_text_primary">#F8F9FA</color>
-    <color name="kryptos_text_secondary">#9AA0A6</color>
-    <color name="kryptos_text_on_primary">#000000</color>
+    <!-- Text (Pure White and Muted Gray) -->
+    <color name="kryptos_text_primary">#FFFFFF</color>
+    <color name="kryptos_text_secondary">#8B8B93</color>
+    <color name="kryptos_text_on_primary">#FFFFFF</color>
 
-    <!-- Address bar (Slightly lighter than background for contrast) -->
-    <color name="kryptos_address_bar_bg">#1C1C1E</color>
-    <color name="kryptos_address_bar_text">#F8F9FA</color>
-    <color name="kryptos_address_bar_hint">#636366</color>
+    <!-- Address bar -->
+    <color name="kryptos_address_bar_bg">#141418</color>
+    <color name="kryptos_address_bar_text">#FFFFFF</color>
+    <color name="kryptos_address_bar_hint">#8B8B93</color>
 
     <!-- Icons -->
-    <color name="kryptos_icon_tint">#F8F9FA</color>
+    <color name="kryptos_icon_tint">#FFFFFF</color>
 
     <!-- States -->
-    <color name="kryptos_error">#FF453A</color>
-    <color name="kryptos_divider">#2C2C2E</color>
+    <color name="kryptos_error">#EF4444</color>
+    <color name="kryptos_divider">#242429</color>
 
 </resources>
