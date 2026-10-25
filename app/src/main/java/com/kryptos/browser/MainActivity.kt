@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
-        // Bind UI
+        // Bind UI - Carefully matched with layout IDs
         webView = findViewById(R.id.webview)
         addressBarText = findViewById(R.id.address_bar_text)
         progressBar = findViewById(R.id.progress_bar)
@@ -108,11 +108,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupAnimations() {
         val logo = findViewById<ImageView>(R.id.homepage_logo)
-        val rotateAnimator = ObjectAnimator.ofFloat(logo, "rotation", 0f, 360f)
-        rotateAnimator.duration = 10000 
-        rotateAnimator.repeatCount = ValueAnimator.INFINITE
-        rotateAnimator.interpolator = LinearInterpolator()
-        rotateAnimator.start()
+        if (logo != null) {
+            val rotateAnimator = ObjectAnimator.ofFloat(logo, "rotation", 0f, 360f)
+            rotateAnimator.duration = 10000 
+            rotateAnimator.repeatCount = ValueAnimator.INFINITE
+            rotateAnimator.interpolator = LinearInterpolator()
+            rotateAnimator.start()
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -202,12 +204,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun clearBrowsingData() {
-        // Clear WebView Cache and Storage
         webView.clearCache(true)
         webView.clearHistory()
         WebStorage.getInstance().deleteAllData()
         
-        // Clear Cookies
         val cookieManager = CookieManager.getInstance()
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
@@ -325,7 +325,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // Auto-Updater Logic
     private fun checkForUpdates() {
         Thread {
             try {
