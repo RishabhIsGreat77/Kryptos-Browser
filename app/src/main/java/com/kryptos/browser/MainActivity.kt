@@ -12,9 +12,11 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
@@ -22,6 +24,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -40,13 +43,13 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var addressBarText: TextView
-    private lateinit var addressBarEdit: EditText
     private lateinit var progressBar: ProgressBar
     private lateinit var homepageContainer: FrameLayout
     private lateinit var errorContainer: FrameLayout
     private lateinit var errorTitle: TextView
     private lateinit var errorMessage: TextView
     private lateinit var homepageSearchInput: EditText
+    private lateinit var txtCurrentEngine: TextView
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -64,7 +67,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         
-        // Default to Dark Mode for premium look
         val isDark = prefs.getBoolean("dark_mode", true) 
         if (isDark) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -80,13 +82,15 @@ class MainActivity : AppCompatActivity() {
         // Bind UI
         webView = findViewById(R.id.webview)
         addressBarText = findViewById(R.id.address_bar_text)
-        addressBarEdit = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
         errorTitle = findViewById(R.id.error_title)
         errorMessage = findViewById(R.id.error_message)
         homepageSearchInput = findViewById(R.id.homepage_search_input)
+        txtCurrentEngine = findViewById(R.id.txt_current_engine)
+
+        updateEngineText()
 
         setupWebView()
         setupToolbar()
@@ -98,11 +102,14 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
+    private fun updateEngineText() {
+        txtCurrentEngine.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
+    }
+
     private fun setupAnimations() {
-        // Rotate the orbital logo continuously
         val logo = findViewById<ImageView>(R.id.homepage_logo)
         val rotateAnimator = ObjectAnimator.ofFloat(logo, "rotation", 0f, 360f)
-        rotateAnimator.duration = 10000 // 10 seconds per rotation
+        rotateAnimator.duration = 10000 
         rotateAnimator.repeatCount = ValueAnimator.INFINITE
         rotateAnimator.interpolator = LinearInterpolator()
         rotateAnimator.start()
@@ -141,8 +148,15 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_tabs).setOnClickListener {
             Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
         }
+        
+        // Privacy Shield Top Button -> Clear Data
         findViewById<ImageButton>(R.id.btn_shield).setOnClickListener {
-            Toast.makeText(this, "Privacy Shield Active. 0 Trackers Blocked.", Toast.LENGTH_SHORT).show()
+            showClearDataDialog()
+        }
+
+        // Homepage Privacy Card -> Clear Data
+        findViewById<LinearLayout>(R.id.card_privacy_shield).setOnClickListener {
+            showClearDataDialog()
         }
 
         // Make Address Bar Text clickable to type a new URL
@@ -150,11 +164,11 @@ class MainActivity : AppCompatActivity() {
             showAddressDialog()
         }
 
+        // Menu Button (Dark Mode & About)
         findViewById<ImageButton>(R.id.btn_menu).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
             
-            // Fix Dark Mode Text dynamically
             val isDark = prefs.getBoolean("dark_mode", true)
             val themeMenuItem = popup.menu.findItem(R.id.action_theme)
             themeMenuItem.title = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
@@ -174,6 +188,31 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
+    }
+
+    private fun showClearDataDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Privacy Shield")
+            .setMessage("Do you want to clear all browsing data (Cookies, Cache, and History)?")
+            .setPositiveButton("Clear Data") { _, _ ->
+                clearBrowsingData()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearBrowsingData() {
+        // Clear WebView Cache and Storage
+        webView.clearCache(true)
+        webView.clearHistory()
+        WebStorage.getInstance().deleteAllData()
+        
+        // Clear Cookies
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+
+        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
     private fun showAddressDialog() {
@@ -204,7 +243,7 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        // Hook up the "Switch" text in homepage
+        // Engine Switcher on Homepage
         findViewById<TextView>(R.id.btn_switch_engine).setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             for (i in searchEngines.indices) {
@@ -214,6 +253,7 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 selectedEngineIndex = item.itemId
                 prefs.edit().putInt("default_search_engine", selectedEngineIndex).apply()
+                updateEngineText()
                 Toast.makeText(this, "${searchEngines[selectedEngineIndex].first} selected", Toast.LENGTH_SHORT).show()
                 true
             }
@@ -267,7 +307,6 @@ class MainActivity : AppCompatActivity() {
     private fun toggleTheme() {
         val isDark = prefs.getBoolean("dark_mode", true)
         val newMode = !isDark
-        // Save FIRST, then recreate
         prefs.edit().putBoolean("dark_mode", newMode).apply()
         AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
         recreate()
