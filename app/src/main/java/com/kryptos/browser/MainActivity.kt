@@ -1,7 +1,5 @@
 package com.kryptos.browser
 
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Context
@@ -10,7 +8,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -23,7 +20,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
@@ -68,12 +64,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
-        
         setContentView(R.layout.activity_main)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
-        // Safely bind UI so if an ID is missing, it won't crash
         webView = findViewById(R.id.webview)
         addressBarText = findViewById(R.id.address_bar_text)
         progressBar = findViewById(R.id.progress_bar)
@@ -91,24 +85,12 @@ class MainActivity : AppCompatActivity() {
         setupHomepage()
         setupErrorPage()
         setupBackPressHandler()
-        setupAnimations()
 
         checkForUpdates()
     }
 
     private fun updateEngineText() {
         txtCurrentEngine?.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
-    }
-
-    private fun setupAnimations() {
-        val logo = findViewById<ImageView>(R.id.homepage_logo)
-        if (logo != null) {
-            val rotateAnimator = ObjectAnimator.ofFloat(logo, "rotation", 0f, 360f)
-            rotateAnimator.duration = 10000 
-            rotateAnimator.repeatCount = ValueAnimator.INFINITE
-            rotateAnimator.interpolator = LinearInterpolator()
-            rotateAnimator.start()
-        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -122,7 +104,9 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        settings.userAgentString = "KryptosBrowser/2.0 (Android)"
+        
+        // FIX: YouTube issue - Use a real Chrome Mobile User-Agent
+        settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
