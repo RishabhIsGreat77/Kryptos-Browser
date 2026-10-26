@@ -42,14 +42,14 @@ import javax.net.ssl.HttpsURLConnection
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var addressBarText: TextView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var homepageContainer: FrameLayout
-    private lateinit var errorContainer: FrameLayout
-    private lateinit var errorTitle: TextView
-    private lateinit var errorMessage: TextView
-    private lateinit var homepageSearchInput: EditText
-    private lateinit var txtCurrentEngine: TextView
+    private var addressBarText: TextView? = null
+    private var progressBar: ProgressBar? = null
+    private var homepageContainer: FrameLayout? = null
+    private var errorContainer: FrameLayout? = null
+    private var errorTitle: TextView? = null
+    private var errorMessage: TextView? = null
+    private var homepageSearchInput: EditText? = null
+    private var txtCurrentEngine: TextView? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -65,24 +65,15 @@ class MainActivity : AppCompatActivity() {
     private var selectedEngineIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Call super.onCreate FIRST to avoid crash
         super.onCreate(savedInstanceState)
 
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         
-        // 2. Set Theme safely
-        val isDark = prefs.getBoolean("dark_mode", true) 
-        if (isDark) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        }
-
         setContentView(R.layout.activity_main)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
-        // Bind UI safely
+        // Safely bind UI so if an ID is missing, it won't crash
         webView = findViewById(R.id.webview)
         addressBarText = findViewById(R.id.address_bar_text)
         progressBar = findViewById(R.id.progress_bar)
@@ -106,7 +97,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateEngineText() {
-        txtCurrentEngine.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
+        txtCurrentEngine?.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
     }
 
     private fun setupAnimations() {
@@ -233,10 +224,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupHomepage() {
         homepageSearchInput?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
-                val input = homepageSearchInput.text.toString().trim()
+                val input = homepageSearchInput?.text.toString().trim()
                 if (input.isNotEmpty()) {
                     loadUrlOrSearch(input)
-                    homepageSearchInput.text.clear()
+                    homepageSearchInput?.text?.clear()
                 }
                 true
             } else false
@@ -272,8 +263,8 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    errorContainer.visibility == View.VISIBLE -> showHomepage()
-                    homepageContainer.visibility == View.VISIBLE -> finish()
+                    errorContainer?.visibility == View.VISIBLE -> showHomepage()
+                    homepageContainer?.visibility == View.VISIBLE -> finish()
                     webView.canGoBack() -> webView.goBack()
                     else -> finish()
                 }
@@ -289,17 +280,17 @@ class MainActivity : AppCompatActivity() {
             searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
 
-        homepageContainer.visibility = View.GONE
-        errorContainer.visibility = View.GONE
+        homepageContainer?.visibility = View.GONE
+        errorContainer?.visibility = View.GONE
         webView.loadUrl(url)
     }
 
     private fun showHomepage() {
         webView.loadUrl("about:blank")
-        homepageContainer.visibility = View.VISIBLE
-        errorContainer.visibility = View.GONE
-        addressBarText.text = "kryptos://home"
-        progressBar.visibility = View.GONE
+        homepageContainer?.visibility = View.VISIBLE
+        errorContainer?.visibility = View.GONE
+        addressBarText?.text = "kryptos://home"
+        progressBar?.visibility = View.GONE
     }
 
     private fun toggleTheme() {
@@ -407,25 +398,25 @@ class MainActivity : AppCompatActivity() {
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             if (url != "about:blank") {
-                addressBarText.text = url
+                addressBarText?.text = url
             } else {
-                addressBarText.text = "kryptos://home"
+                addressBarText?.text = "kryptos://home"
             }
-            errorContainer.visibility = View.GONE
+            errorContainer?.visibility = View.GONE
         }
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            progressBar.visibility = View.GONE
+            progressBar?.visibility = View.GONE
         }
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
                 val desc = error?.description?.toString() ?: "Unknown error"
                 lastFailedUrl = request.url.toString()
-                errorTitle.text = getString(R.string.error_title)
-                errorMessage.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
-                errorContainer.visibility = View.VISIBLE
-                homepageContainer.visibility = View.GONE
+                errorTitle?.text = getString(R.string.error_title)
+                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
+                errorContainer?.visibility = View.VISIBLE
+                homepageContainer?.visibility = View.GONE
             }
         }
     }
@@ -434,10 +425,10 @@ class MainActivity : AppCompatActivity() {
         override fun onProgressChanged(view: WebView?, newProgress: Int) {
             super.onProgressChanged(view, newProgress)
             if (newProgress < 100) {
-                progressBar.visibility = View.VISIBLE
-                progressBar.progress = newProgress
+                progressBar?.visibility = View.VISIBLE
+                progressBar?.progress = newProgress
             } else {
-                progressBar.visibility = View.GONE
+                progressBar?.visibility = View.GONE
             }
         }
     }
