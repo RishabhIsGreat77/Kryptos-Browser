@@ -1,54 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="120dp"
-    android:height="120dp"
-    android:viewportWidth="96"
-    android:viewportHeight="96">
-
-    <!-- Outer dotted concentric ring -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="@color/kryptos_text_primary"
-        android:strokeWidth="1"
-        android:pathData="M48,8 A40,40 0 1,1 47.99,8 Z" />
+    android:width="120dp" android:height="120dp"
+    android:viewportWidth="96" android:viewportHeight="96">
 
     <!-- Crosshairs -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="@color/kryptos_text_primary"
-        android:strokeWidth="1.5"
-        android:pathData="M48,2 L48,10 M48,86 L48,94 M2,48 L10,48 M86,48 L94,48" />
+    <path android:fillColor="#00000000" android:strokeColor="@color/kryptos_text_primary" android:strokeWidth="1" android:pathData="M48,4 L48,10 M48,86 L48,92 M4,48 L10,48 M86,48 L92,48" />
+
+    <!-- Outer Dotted Ring (Simulated) -->
+    <path android:fillColor="#00000000" android:strokeColor="@color/kryptos_text_primary" android:strokeWidth="0.8" android:strokeLineCap="round" android:pathData="M48,8 A40,40 0 1,1 47.99,8 Z" />
 
     <!-- Orbit Ring 1 (0 degrees) -->
     <group android:pivotX="48" android:pivotY="48" android:rotation="0">
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="@color/kryptos_text_primary"
-            android:strokeWidth="1"
-            android:pathData="M18,48 A30,9 0 1,1 78,48 A30,9 0 1,1 18,48 Z" />
+        <path android:fillColor="#00000000" android:strokeColor="@color/kryptos_text_primary" android:strokeWidth="1" android:pathData="M18,48 A30,8 0 1,1 78,48 A30,8 0 1,1 18,48 Z" />
     </group>
 
     <!-- Orbit Ring 2 (60 degrees) -->
     <group android:pivotX="48" android:pivotY="48" android:rotation="60">
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="@color/kryptos_text_primary"
-            android:strokeWidth="1"
-            android:pathData="M18,48 A30,9 0 1,1 78,48 A30,9 0 1,1 18,48 Z" />
+        <path android:fillColor="#00000000" android:strokeColor="@color/kryptos_text_primary" android:strokeWidth="1" android:pathData="M18,48 A30,8 0 1,1 78,48 A30,8 0 1,1 18,48 Z" />
     </group>
 
     <!-- Orbit Ring 3 (120 degrees) -->
     <group android:pivotX="48" android:pivotY="48" android:rotation="120">
-        <path
-            android:fillColor="#00000000"
-            android:strokeColor="@color/kryptos_text_primary"
-            android:strokeWidth="1"
-            android:pathData="M18,48 A30,9 0 1,1 78,48 A30,9 0 1,1 18,48 Z" />
+        <path android:fillColor="#00000000" android:strokeColor="@color/kryptos_text_primary" android:strokeWidth="1" android:pathData="M18,48 A30,8 0 1,1 78,48 A30,8 0 1,1 18,48 Z" />
     </group>
-
-    <!-- Solid white orbital node dot -->
-    <path
-        android:fillColor="@color/kryptos_text_primary"
-        android:pathData="M68,28 A3,3 0 1,1 67.99,28 Z" />
-        
 </vector>
