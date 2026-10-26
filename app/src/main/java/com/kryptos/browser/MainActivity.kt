@@ -1,5 +1,6 @@
 package com.kryptos.browser
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Context
@@ -8,6 +9,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -33,6 +35,8 @@ import androidx.core.content.FileProvider
 import org.json.JSONObject
 import java.io.File
 import java.net.URL
+import kotlin.math.cos
+import kotlin.math.sin
 import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : AppCompatActivity() {
@@ -79,14 +83,45 @@ class MainActivity : AppCompatActivity() {
         txtCurrentEngine = findViewById(R.id.txt_current_engine)
 
         updateEngineText()
-
         setupWebView()
         setupToolbar()
         setupHomepage()
         setupErrorPage()
         setupBackPressHandler()
+        startOrbitAnimation() // <--- NAYA ANIMATION
 
         checkForUpdates()
+    }
+
+    // यह फंक्शन डॉट्स को अंडाकार (ellipse) में घुमाएगा
+    private fun startOrbitAnimation() {
+        val dot1 = findViewById<View>(R.id.dot1) ?: return
+        val dot2 = findViewById<View>(R.id.dot2) ?: return
+        val dot3 = findViewById<View>(R.id.dot3) ?: return
+
+        // गोले का साइज़ (radius)
+        val radiusX = 130f // चौड़ाई
+        val radiusY = 35f  // ऊँचाई (क्योंकि यह देखने में अंडाकार है)
+
+        // 3 अलग-अलग एनिमेटर्स, अलग-अलग स्पीड और एंगल के साथ
+        animateDot(dot1, radiusX, radiusY, 4000, 0f)      // 4 सेकंड में 1 चक्कर
+        animateDot(dot2, radiusX, radiusY, 5500, 60f)     // 5.5 सेकंड में 1 चक्कर
+        animateDot(dot3, radiusX, radiusY, 7000, 120f)    // 7 सेकंड में 1 चक्कर
+    }
+
+    private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, startAngle: Float) {
+        val animator = ValueAnimator.ofFloat(0f, 360f)
+        animator.duration = duration
+        animator.repeatCount = ValueAnimator.INFINITE
+        animator.interpolator = LinearInterpolator()
+
+        animator.addUpdateListener { animation ->
+            val angle = Math.toRadians((animation.animatedValue as Float + startAngle).toDouble())
+            // गणित (Math) से X और Y पोज़िशन निकालना
+            dot.translationX = (rx * cos(angle)).toFloat()
+            dot.translationY = (ry * sin(angle)).toFloat()
+        }
+        animator.start()
     }
 
     private fun updateEngineText() {
@@ -128,15 +163,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
             Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
         }
-        
         findViewById<ImageButton>(R.id.btn_shield)?.setOnClickListener {
             showClearDataDialog()
         }
-
         findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
             showClearDataDialog()
         }
-
         addressBarText?.setOnClickListener {
             showAddressDialog()
         }
@@ -170,9 +202,7 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Privacy Shield")
             .setMessage("Do you want to clear all browsing data (Cookies, Cache, and History)?")
-            .setPositiveButton("Clear Data") { _, _ ->
-                clearBrowsingData()
-            }
+            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
             .setNegativeButton("Cancel", null)
             .show()
     }
@@ -181,11 +211,9 @@ class MainActivity : AppCompatActivity() {
         webView.clearCache(true)
         webView.clearHistory()
         WebStorage.getInstance().deleteAllData()
-        
         val cookieManager = CookieManager.getInstance()
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
-
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
@@ -193,7 +221,6 @@ class MainActivity : AppCompatActivity() {
         val input = EditText(this)
         input.setText(if (webView.url == "about:blank") "" else webView.url)
         input.setSelection(input.text.length)
-        
         AlertDialog.Builder(this)
             .setTitle("Enter URL or Search")
             .setView(input)
@@ -235,12 +262,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupErrorPage() {
-        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
-            lastFailedUrl?.let { loadUrlOrSearch(it) }
-        }
-        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
-            showHomepage()
-        }
+        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener { lastFailedUrl?.let { loadUrlOrSearch(it) } }
+        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener { showHomepage() }
     }
 
     private fun setupBackPressHandler() {
@@ -258,12 +281,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadUrlOrSearch(input: String) {
         val url = if (input.contains(".") && !input.contains(" ")) {
-            if (input.startsWith("http://") || input.startsWith("https://")) input
-            else "https://$input"
+            if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
             searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
-
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
         webView.loadUrl(url)
