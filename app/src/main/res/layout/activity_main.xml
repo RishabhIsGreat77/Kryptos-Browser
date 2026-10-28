@@ -50,7 +50,6 @@
             android:contentDescription="Privacy Shield" />
     </LinearLayout>
 
-    <!-- PROGRESS BAR -->
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -105,10 +104,11 @@
             android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" 
             android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
         
+        <!-- SETTINGS BUTTON (Square ki jagah gear icon) -->
         <ImageButton
             android:id="@+id/btn_settings"
             android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-            android:src="@drawable/ic_menu_grid"
+            android:src="@android:drawable/ic_menu_preferences"
             android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
     </LinearLayout>
 
