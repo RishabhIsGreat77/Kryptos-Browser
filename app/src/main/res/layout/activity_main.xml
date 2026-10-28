@@ -3,53 +3,51 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:background="@color/kryptos_background">
 
-    <!-- TOP BAR -->
+    <!-- TOP BAR (Everything in one line) -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="56dp"
         android:orientation="horizontal" android:gravity="center_vertical"
-        android:paddingHorizontal="16dp" android:layout_marginTop="8dp">
+        android:paddingHorizontal="8dp" android:layout_marginTop="8dp">
 
+        <!-- Address Bar (Inline Editable) -->
         <LinearLayout
             android:layout_width="0dp" android:layout_height="44dp"
             android:layout_weight="1" android:background="@drawable/bg_address_bar_pill"
             android:orientation="horizontal" android:gravity="center_vertical"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="12dp">
 
-            <TextView
-                android:id="@+id/address_bar_text"
-                android:layout_width="0dp" android:layout_height="wrap_content"
+            <EditText
+                android:id="@+id/address_bar"
+                android:layout_width="0dp" android:layout_height="match_parent"
                 android:layout_weight="1" android:text="kryptos://home"
                 android:textColor="@color/kryptos_text_primary" android:textSize="14sp"
-                android:maxLines="1" android:ellipsize="end" />
+                android:background="@android:color/transparent"
+                android:imeOptions="actionGo" android:inputType="textUri"
+                android:maxLines="1" android:selectAllOnFocus="true" />
 
             <ImageButton
                 android:id="@+id/btn_reload"
-                android:layout_width="24dp" android:layout_height="24dp"
+                android:layout_width="28dp" android:layout_height="28dp"
                 android:src="@drawable/ic_reload"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:tint="@color/kryptos_text_secondary"
                 android:contentDescription="Reload" />
         </LinearLayout>
 
-        <!-- FULLSCREEN BUTTON -->
-        <ImageButton
-            android:id="@+id/btn_fullscreen"
-            android:layout_width="44dp" android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:src="@android:drawable/ic_menu_crop"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_text_secondary"
-            android:contentDescription="Fullscreen" />
+        <!-- Compact Icons: Back, Forward, Home, Tabs -->
+        <ImageButton android:id="@+id/btn_back" android:layout_width="36dp" android:layout_height="36dp" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="6dp" />
+        <ImageButton android:id="@+id/btn_forward" android:layout_width="36dp" android:layout_height="36dp" android:src="@drawable/ic_forward" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="6dp" />
+        <ImageButton android:id="@+id/btn_home" android:layout_width="36dp" android:layout_height="36dp" android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="6dp" />
+        
+        <!-- Tabs Icon (Shows V3 Toast) -->
+        <ImageButton android:id="@+id/btn_tabs" android:layout_width="36dp" android:layout_height="36dp" android:src="@drawable/ic_tabs" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="6dp" />
 
-        <!-- SHIELD BUTTON -->
-        <ImageButton
-            android:id="@+id/btn_shield"
-            android:layout_width="44dp" android:layout_height="44dp"
-            android:layout_marginStart="4dp"
-            android:src="@drawable/ic_shield"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Privacy Shield" />
+        <!-- Settings Icon (Replaced Shield) -->
+        <ImageButton android:id="@+id/btn_settings" android:layout_width="36dp" android:layout_height="36dp" android:src="@android:drawable/ic_menu_preferences" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="6dp" />
+
     </LinearLayout>
 
+    <!-- PROGRESS BAR -->
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -82,34 +80,5 @@
             <include layout="@layout/layout_error_page" />
         </FrameLayout>
     </FrameLayout>
-
-    <!-- BOTTOM BAR -->
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="64dp"
-        android:orientation="horizontal" android:gravity="center"
-        android:background="@color/kryptos_surface" android:elevation="8dp" android:paddingBottom="8dp">
-
-        <ImageButton 
-            android:id="@+id/btn_back" 
-            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" 
-            android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
-            
-        <ImageButton 
-            android:id="@+id/btn_forward" 
-            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" 
-            android:src="@drawable/ic_forward" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
-            
-        <ImageButton 
-            android:id="@+id/btn_home" 
-            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" 
-            android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
-        
-        <!-- SETTINGS BUTTON (Square ki jagah gear icon) -->
-        <ImageButton
-            android:id="@+id/btn_settings"
-            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
-            android:src="@android:drawable/ic_menu_preferences"
-            android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
-    </LinearLayout>
 
 </LinearLayout>
