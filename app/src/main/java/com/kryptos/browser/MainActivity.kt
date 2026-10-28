@@ -8,6 +8,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -25,6 +27,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.URL
@@ -46,6 +49,10 @@ class MainActivity : AppCompatActivity() {
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
+
+    // Search Suggestions ke liye Handler (Debounce ke liye taaki har akshar par API na call ho)
+    private val suggestionHandler = Handler(Looper.getMainLooper())
+    private var suggestionRunnable: Runnable? = null
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -84,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
-    // FIXED: Ab har dot apne tilted orbit par ghoomega
+    // FIXED: 3 Orbits with actual tilt
     private fun startOrbitAnimation() {
         val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
@@ -96,10 +103,9 @@ class MainActivity : AppCompatActivity() {
             val rx = width * (30f / 96f)
             val ry = width * (8f / 96f)
 
-            // tiltAngle determines the angle of the orbit path itself
-            animateDot(dot1, rx, ry, 4000, 0.0)       // 0 degree tilt
-            animateDot(dot2, rx, ry, 5500, 60.0)      // 60 degree tilt
-            animateDot(dot3, rx, ry, 7000, 120.0)     // 120 degree tilt
+            animateDot(dot1, rx, ry, 4000, 0.0)
+            animateDot(dot2, rx, ry, 5500, 60.0)
+            animateDot(dot3, rx, ry, 7000, 120.0)
         }
     }
 
@@ -111,12 +117,9 @@ class MainActivity : AppCompatActivity() {
 
         animator.addUpdateListener { animation ->
             val angle = Math.toRadians((animation.animatedValue as Float).toDouble())
-            
-            // Base ellipse coordinates
             val x = rx * cos(angle)
             val y = ry * sin(angle)
 
-            // Apply Rotation Matrix to tilt the orbit
             val tiltRad = Math.toRadians(tiltAngle)
             val rotatedX = x * cos(tiltRad) - y * sin(tiltRad)
             val rotatedY = x * sin(tiltRad) + y * cos(tiltRad)
@@ -149,6 +152,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
+        // FIXED: Address bar clear on click if it's home URL
+        addressBar?.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
+                addressBar?.setText("")
+            }
+        }
+
         addressBar?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val input = addressBar?.text.toString().trim()
@@ -179,17 +189,24 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Settings error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+        
+        // FIXED: Privacy Shield Listener wapas add kar diya
+        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
+            showClearDataDialog()
+        }
     }
 
     private fun setupHomepage() {
         homepageSearchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                btnClearInput?.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                val query = s.toString().trim()
+                btnClearInput?.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+                
                 val suggestionsEnabled = prefs.getBoolean("search_suggestions", true)
-                if (suggestionsEnabled && s != null && s.length > 2) {
-                    txtSuggestion?.text = "Trending search: $s ..."
-                    txtSuggestion?.visibility = View.VISIBLE
+                if (suggestionsEnabled && query.length > 1) {
+                    // FIXED: Asli Google API se suggestions fetch karna
+                    fetchLiveSuggestions(query)
                 } else {
                     txtSuggestion?.visibility = View.GONE
                 }
@@ -229,6 +246,58 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
+    }
+
+    // NAYA: Live Google Suggestions Fetch Karne ka Logic
+    private fun fetchLiveSuggestions(query: String) {
+        suggestionRunnable?.let { suggestionHandler.removeCallbacks(it) }
+        
+        suggestionRunnable = Runnable {
+            Thread {
+                try {
+                    val url = URL("https://suggestqueries.google.com/complete/search?client=firefox&q=${Uri.encode(query)}")
+                    val connection = url.openConnection() as HttpsURLConnection
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    
+                    val jsonArray = JSONArray(response)
+                    val suggestionsArray = jsonArray.getJSONArray(1)
+                    
+                    if (suggestionsArray.length() > 0) {
+                        val topSuggestion = suggestionsArray.getString(0)
+                        runOnUiThread {
+                            // Check karo ki user ne tab tak kuch aur type toh nahi kiya
+                            if (homepageSearchInput?.text.toString().trim() == query) {
+                                txtSuggestion?.text = topSuggestion
+                                txtSuggestion?.visibility = View.VISIBLE
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Agar internet nahi hai toh chupchap ignore karo
+                }
+            }.start()
+        }
+        // 300ms delay (Debounce) taaki har akshar par API call na jaye
+        suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
+    }
+
+    private fun showClearDataDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Privacy Shield")
+            .setMessage("Do you want to clear all browsing data?")
+            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearBrowsingData() {
+        webView.clearCache(true)
+        webView.clearHistory()
+        WebStorage.getInstance().deleteAllData()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupBackPressHandler() {
