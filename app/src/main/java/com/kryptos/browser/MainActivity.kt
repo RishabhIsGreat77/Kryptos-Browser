@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
@@ -25,7 +24,6 @@ import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.FileProvider
 import org.json.JSONObject
 import java.io.File
@@ -37,7 +35,7 @@ import javax.net.ssl.HttpsURLConnection
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private var addressBarText: TextView? = null
+    private var addressBar: EditText? = null
     private var progressBar: ProgressBar? = null
     private var homepageContainer: FrameLayout? = null
     private var errorContainer: FrameLayout? = null
@@ -49,7 +47,6 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
-    // सभी 6 सर्च इंजन वापस आ गए
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
@@ -68,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
 
         webView = findViewById(R.id.webview)
-        addressBarText = findViewById(R.id.address_bar_text)
+        addressBar = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
@@ -87,17 +84,14 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
-    // सही मैथ के साथ ऑर्बिट एनिमेशन (डायनामिक साइज़)
     private fun startOrbitAnimation() {
         val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
         val dot2 = findViewById<View>(R.id.dot2) ?: return
         val dot3 = findViewById<View>(R.id.dot3) ?: return
 
-        // Container का साइज़ मिलने का इंतज़ार करें
         container.post {
             val width = container.width.toFloat()
-            // SVG डिजाइन के हिसाब से सही रेडियस (rx=30, ry=8 out of 96)
             val rx = width * (30f / 96f)
             val ry = width * (8f / 96f)
 
@@ -137,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // Desktop User-Agent (ताकि YouTube पुराना वर्ज़न न खोले)
+        // Desktop User-Agent (Fixes YouTube old version issue)
         settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         webView.webViewClient = KryptosWebViewClient()
@@ -145,6 +139,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
+        // Address Bar Inline Actions
+        addressBar?.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_GO) {
+                val input = addressBar?.text.toString().trim()
+                if (input.isNotEmpty()) loadUrlOrSearch(input)
+                true
+            } else false
+        }
+
+        // UI Buttons (Now at the top)
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
             if (webView.canGoBack()) webView.goBack()
         }
@@ -157,43 +161,19 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepage()
         }
-        findViewById<ImageButton>(R.id.btn_fullscreen)?.setOnClickListener {
-            toggleFullscreen()
-        }
         
-        // Settings बटन (अब क्रैश नहीं होगा क्योंकि हमने इसे Manifest में जोड़ा है)
+        // Tabs Button (V3 Message)
+        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
+            Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
+        }
+
+        // Settings Button
         findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
             try {
                 startActivity(Intent(this, SettingsActivity::class.java))
             } catch (e: Exception) {
                 Toast.makeText(this, "Settings error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-        }
-
-        findViewById<ImageButton>(R.id.btn_shield)?.setOnClickListener {
-            showClearDataDialog()
-        }
-        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
-            showClearDataDialog()
-        }
-        addressBarText?.setOnClickListener {
-            showAddressDialog()
-        }
-    }
-
-    private fun toggleFullscreen() {
-        val attrs = window.attributes
-        if (attrs.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN == 0) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
-        } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         }
     }
 
@@ -247,45 +227,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showAddressDialog() {
-        val dialogLayout = LinearLayout(this)
-        dialogLayout.orientation = LinearLayout.VERTICAL
-        dialogLayout.setPadding(50, 40, 50, 10)
-        val input = EditText(this)
-        input.setText(if (webView.url == "about:blank") "" else webView.url)
-        input.setSelection(input.text.length)
-        dialogLayout.addView(input)
-
-        AlertDialog.Builder(this)
-            .setTitle("Enter URL or Search")
-            .setView(dialogLayout)
-            .setPositiveButton("Go") { _, _ ->
-                val url = input.text.toString().trim()
-                if (url.isNotEmpty()) loadUrlOrSearch(url)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showClearDataDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Privacy Shield")
-            .setMessage("Do you want to clear all browsing data?")
-            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun clearBrowsingData() {
-        webView.clearCache(true)
-        webView.clearHistory()
-        WebStorage.getInstance().deleteAllData()
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies(null)
-        cookieManager.flush()
-        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
-    }
-
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -314,7 +255,7 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("about:blank")
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
-        addressBarText?.text = "kryptos://home"
+        addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
     }
 
@@ -399,7 +340,8 @@ class MainActivity : AppCompatActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            addressBarText?.text = if (url != "about:blank") url else "kryptos://home"
+            // Update Top Address Bar
+            addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
         override fun onPageFinished(view: WebView?, url: String?) {
