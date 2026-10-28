@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet Permission -->
     <uses-permission android:name="android.permission.INTERNET" />
-    
-    <!-- App ko khud ko update karne ki permission -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -17,7 +14,6 @@
         android:theme="@style/Theme.KryptosBrowser"
         android:usesCleartextTraffic="false">
 
-        <!-- NAYA: SplashActivity ab LAUNCHER ban gayi hai -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -28,14 +24,15 @@
             </intent-filter>
         </activity>
 
-        <!-- MainActivity ab normal activity hai -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:launchMode="singleTask" />
 
-        <!-- FileProvider (APK install karne ke liye zaroori hai) -->
+        <!-- NAYA: SettingsActivity को रजिस्टर किया (क्रैश खत्म) -->
+        <activity android:name=".SettingsActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
