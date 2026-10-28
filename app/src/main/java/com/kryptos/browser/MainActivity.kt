@@ -8,7 +8,10 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
+import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
@@ -18,15 +21,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.PopupMenu
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -50,6 +45,8 @@ class MainActivity : AppCompatActivity() {
     private var errorMessage: TextView? = null
     private var homepageSearchInput: EditText? = null
     private var txtCurrentEngine: TextView? = null
+    private var btnClearInput: ImageView? = null
+    private var txtSuggestion: TextView? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -58,15 +55,12 @@ class MainActivity : AppCompatActivity() {
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
         Pair("DuckDuckGo", "https://duckduckgo.com/?q="),
-        Pair("Brave Search", "https://search.brave.com/search?q="),
-        Pair("Yahoo", "https://search.yahoo.com/search?p="),
-        Pair("Ecosia", "https://www.ecosia.org/search?q=")
+        Pair("Brave Search", "https://search.brave.com/search?q=")
     )
     private var selectedEngineIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         setContentView(R.layout.activity_main)
 
@@ -81,6 +75,8 @@ class MainActivity : AppCompatActivity() {
         errorMessage = findViewById(R.id.error_message)
         homepageSearchInput = findViewById(R.id.homepage_search_input)
         txtCurrentEngine = findViewById(R.id.txt_current_engine)
+        btnClearInput = findViewById(R.id.btn_clear_input)
+        txtSuggestion = findViewById(R.id.txt_suggestion)
 
         updateEngineText()
         setupWebView()
@@ -88,25 +84,24 @@ class MainActivity : AppCompatActivity() {
         setupHomepage()
         setupErrorPage()
         setupBackPressHandler()
-        startOrbitAnimation() // <--- NAYA ANIMATION
+        startOrbitAnimation()
 
         checkForUpdates()
     }
 
-    // यह फंक्शन डॉट्स को अंडाकार (ellipse) में घुमाएगा
+    // ORBIT ANIMATION FIXED
     private fun startOrbitAnimation() {
         val dot1 = findViewById<View>(R.id.dot1) ?: return
         val dot2 = findViewById<View>(R.id.dot2) ?: return
         val dot3 = findViewById<View>(R.id.dot3) ?: return
 
-        // गोले का साइज़ (radius)
-        val radiusX = 130f // चौड़ाई
-        val radiusY = 35f  // ऊँचाई (क्योंकि यह देखने में अंडाकार है)
+        // यहाँ साइज़ को थोड़ा एडजस्ट किया गया है ताकि डॉट्स गोले पर सही बैठें
+        val radiusX = 130f
+        val radiusY = 33f 
 
-        // 3 अलग-अलग एनिमेटर्स, अलग-अलग स्पीड और एंगल के साथ
-        animateDot(dot1, radiusX, radiusY, 4000, 0f)      // 4 सेकंड में 1 चक्कर
-        animateDot(dot2, radiusX, radiusY, 5500, 60f)     // 5.5 सेकंड में 1 चक्कर
-        animateDot(dot3, radiusX, radiusY, 7000, 120f)    // 7 सेकंड में 1 चक्कर
+        animateDot(dot1, radiusX, radiusY, 4000, 0f)
+        animateDot(dot2, radiusX, radiusY, 5500, 60f)
+        animateDot(dot3, radiusX, radiusY, 7000, 120f)
     }
 
     private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, startAngle: Float) {
@@ -117,7 +112,6 @@ class MainActivity : AppCompatActivity() {
 
         animator.addUpdateListener { animation ->
             val angle = Math.toRadians((animation.animatedValue as Float + startAngle).toDouble())
-            // गणित (Math) से X और Y पोज़िशन निकालना
             dot.translationX = (rx * cos(angle)).toFloat()
             dot.translationY = (ry * sin(angle)).toFloat()
         }
@@ -140,8 +134,8 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // FIX: YouTube issue - Use a real Chrome Mobile User-Agent
-        settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        // YOUTUBE FIX: Force Desktop User-Agent so YouTube opens in full version
+        settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
@@ -160,85 +154,73 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepage()
         }
-        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
-            Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
+        
+        // NAYA: Fullscreen Toggle
+        findViewById<ImageButton>(R.id.btn_fullscreen)?.setOnClickListener {
+            toggleFullscreen()
         }
+
+        // NAYA: Settings Button
+        findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         findViewById<ImageButton>(R.id.btn_shield)?.setOnClickListener {
-            showClearDataDialog()
-        }
-        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
             showClearDataDialog()
         }
         addressBarText?.setOnClickListener {
             showAddressDialog()
         }
+    }
 
-        findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
-            val popup = PopupMenu(this, view)
-            popup.menuInflater.inflate(R.menu.menu_browser, popup.menu)
-            
-            val isDark = prefs.getBoolean("dark_mode", true)
-            val themeMenuItem = popup.menu.findItem(R.id.action_theme)
-            themeMenuItem.title = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
-
-            popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.action_theme -> {
-                        toggleTheme()
-                        true
-                    }
-                    R.id.action_about -> {
-                        showAboutDialog()
-                        true
-                    }
-                    else -> false
-                }
-            }
-            popup.show()
+    private fun toggleFullscreen() {
+        val attrs = window.attributes
+        if (attrs.flags and WindowManager.LayoutParams.FLAG_FULLSCREEN == 0) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         }
     }
 
-    private fun showClearDataDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Privacy Shield")
-            .setMessage("Do you want to clear all browsing data (Cookies, Cache, and History)?")
-            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun clearBrowsingData() {
-        webView.clearCache(true)
-        webView.clearHistory()
-        WebStorage.getInstance().deleteAllData()
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies(null)
-        cookieManager.flush()
-        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun showAddressDialog() {
-        val input = EditText(this)
-        input.setText(if (webView.url == "about:blank") "" else webView.url)
-        input.setSelection(input.text.length)
-        AlertDialog.Builder(this)
-            .setTitle("Enter URL or Search")
-            .setView(input)
-            .setPositiveButton("Go") { _, _ ->
-                val url = input.text.toString().trim()
-                if (url.isNotEmpty()) loadUrlOrSearch(url)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
+    // NAYA: "X" Button Logic aur Search Suggestions
     private fun setupHomepage() {
+        homepageSearchInput?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // "X" button dikhana ya chhipana
+                btnClearInput?.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+
+                // Search Suggestion Logic
+                val suggestionsEnabled = prefs.getBoolean("search_suggestions", true)
+                if (suggestionsEnabled && s != null && s.length > 2) {
+                    txtSuggestion?.text = "Trending search: $s ..."
+                    txtSuggestion?.visibility = View.VISIBLE
+                } else {
+                    txtSuggestion?.visibility = View.GONE
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        btnClearInput?.setOnClickListener {
+            homepageSearchInput?.text?.clear()
+            txtSuggestion?.visibility = View.GONE
+        }
+
         homepageSearchInput?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val input = homepageSearchInput?.text.toString().trim()
                 if (input.isNotEmpty()) {
                     loadUrlOrSearch(input)
                     homepageSearchInput?.text?.clear()
+                    txtSuggestion?.visibility = View.GONE
                 }
                 true
             } else false
@@ -259,6 +241,47 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
+    }
+
+    // Address Bar Dialog Fix (Beautiful layout)
+    private fun showAddressDialog() {
+        val dialogLayout = LinearLayout(this)
+        dialogLayout.orientation = LinearLayout.VERTICAL
+        dialogLayout.setPadding(50, 40, 50, 10)
+
+        val input = EditText(this)
+        input.setText(if (webView.url == "about:blank") "" else webView.url)
+        input.setSelection(input.text.length)
+        dialogLayout.addView(input)
+
+        AlertDialog.Builder(this)
+            .setTitle("Enter URL or Search")
+            .setView(dialogLayout)
+            .setPositiveButton("Go") { _, _ ->
+                val url = input.text.toString().trim()
+                if (url.isNotEmpty()) loadUrlOrSearch(url)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showClearDataDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Privacy Shield")
+            .setMessage("Do you want to clear all browsing data?")
+            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearBrowsingData() {
+        webView.clearCache(true)
+        webView.clearHistory()
+        WebStorage.getInstance().deleteAllData()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupErrorPage() {
@@ -298,22 +321,6 @@ class MainActivity : AppCompatActivity() {
         progressBar?.visibility = View.GONE
     }
 
-    private fun toggleTheme() {
-        val isDark = prefs.getBoolean("dark_mode", true)
-        val newMode = !isDark
-        prefs.edit().putBoolean("dark_mode", newMode).apply()
-        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-        recreate()
-    }
-
-    private fun showAboutDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.about_title)
-            .setMessage("${getString(R.string.about_description)}\n\nVersion: 2.0.0")
-            .setPositiveButton(R.string.about_close, null)
-            .show()
-    }
-
     override fun onDestroy() {
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
@@ -342,7 +349,7 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdateDialog(version: String, downloadUrl: String) {
         AlertDialog.Builder(this)
             .setTitle("Update Available")
-            .setMessage("A new version ($version) of Kryptos Browser is available. Update now to get the latest features.")
+            .setMessage("A new version ($version) is available. Update now?")
             .setCancelable(false)
             .setPositiveButton("Update Now") { _, _ -> downloadAndInstallApk(downloadUrl) }
             .setNegativeButton("Later", null)
@@ -362,9 +369,7 @@ class MainActivity : AppCompatActivity() {
                 connection.connect()
 
                 val apkFile = File(externalCacheDir, "kryptos_update.apk")
-                connection.inputStream.use { input ->
-                    apkFile.outputStream().use { output -> input.copyTo(output) }
-                }
+                connection.inputStream.use { input -> apkFile.outputStream().use { output -> input.copyTo(output) } }
 
                 runOnUiThread {
                     progressDialog.dismiss()
@@ -385,7 +390,6 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
                 intent.data = Uri.parse("package:$packageName")
                 startActivity(intent)
-                Toast.makeText(this, "Please allow Kryptos to install updates, then click Update again.", Toast.LENGTH_LONG).show()
                 return
             }
         }
@@ -419,22 +423,4 @@ class MainActivity : AppCompatActivity() {
                 val desc = error?.description?.toString() ?: "Unknown error"
                 lastFailedUrl = request.url.toString()
                 errorTitle?.text = getString(R.string.error_title)
-                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
-                errorContainer?.visibility = View.VISIBLE
-                homepageContainer?.visibility = View.GONE
-            }
-        }
-    }
-
-    inner class KryptosWebChromeClient : WebChromeClient() {
-        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-            super.onProgressChanged(view, newProgress)
-            if (newProgress < 100) {
-                progressBar?.visibility = View.VISIBLE
-                progressBar?.progress = newProgress
-            } else {
-                progressBar?.visibility = View.GONE
-            }
-        }
-    }
-}
+                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n
