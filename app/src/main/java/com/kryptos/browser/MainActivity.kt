@@ -41,8 +41,6 @@ class MainActivity : AppCompatActivity() {
     private var progressBar: ProgressBar? = null
     private var homepageContainer: FrameLayout? = null
     private var errorContainer: FrameLayout? = null
-    private var errorTitle: TextView? = null
-    private var errorMessage: TextView? = null
     private var homepageSearchInput: EditText? = null
     private var txtCurrentEngine: TextView? = null
     private var btnClearInput: ImageView? = null
@@ -51,11 +49,14 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
+    // सभी 6 सर्च इंजन वापस आ गए
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
         Pair("DuckDuckGo", "https://duckduckgo.com/?q="),
-        Pair("Brave Search", "https://search.brave.com/search?q=")
+        Pair("Brave Search", "https://search.brave.com/search?q="),
+        Pair("Yahoo", "https://search.yahoo.com/search?p="),
+        Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
     private var selectedEngineIndex = 0
 
@@ -71,8 +72,6 @@ class MainActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progress_bar)
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
-        errorTitle = findViewById(R.id.error_title)
-        errorMessage = findViewById(R.id.error_message)
         homepageSearchInput = findViewById(R.id.homepage_search_input)
         txtCurrentEngine = findViewById(R.id.txt_current_engine)
         btnClearInput = findViewById(R.id.btn_clear_input)
@@ -82,26 +81,30 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupToolbar()
         setupHomepage()
-        setupErrorPage()
         setupBackPressHandler()
         startOrbitAnimation()
 
         checkForUpdates()
     }
 
-    // ORBIT ANIMATION FIXED
+    // सही मैथ के साथ ऑर्बिट एनिमेशन (डायनामिक साइज़)
     private fun startOrbitAnimation() {
+        val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
         val dot2 = findViewById<View>(R.id.dot2) ?: return
         val dot3 = findViewById<View>(R.id.dot3) ?: return
 
-        // यहाँ साइज़ को थोड़ा एडजस्ट किया गया है ताकि डॉट्स गोले पर सही बैठें
-        val radiusX = 130f
-        val radiusY = 33f 
+        // Container का साइज़ मिलने का इंतज़ार करें
+        container.post {
+            val width = container.width.toFloat()
+            // SVG डिजाइन के हिसाब से सही रेडियस (rx=30, ry=8 out of 96)
+            val rx = width * (30f / 96f)
+            val ry = width * (8f / 96f)
 
-        animateDot(dot1, radiusX, radiusY, 4000, 0f)
-        animateDot(dot2, radiusX, radiusY, 5500, 60f)
-        animateDot(dot3, radiusX, radiusY, 7000, 120f)
+            animateDot(dot1, rx, ry, 4000, 0f)
+            animateDot(dot2, rx, ry, 5500, 60f)
+            animateDot(dot3, rx, ry, 7000, 120f)
+        }
     }
 
     private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, startAngle: Float) {
@@ -134,7 +137,7 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // YOUTUBE FIX: Force Desktop User-Agent so YouTube opens in full version
+        // Desktop User-Agent (ताकि YouTube पुराना वर्ज़न न खोले)
         settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         webView.webViewClient = KryptosWebViewClient()
@@ -154,18 +157,23 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepage()
         }
-        
-        // NAYA: Fullscreen Toggle
         findViewById<ImageButton>(R.id.btn_fullscreen)?.setOnClickListener {
             toggleFullscreen()
         }
-
-        // NAYA: Settings Button
+        
+        // Settings बटन (अब क्रैश नहीं होगा क्योंकि हमने इसे Manifest में जोड़ा है)
         findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+            try {
+                startActivity(Intent(this, SettingsActivity::class.java))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Settings error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
 
         findViewById<ImageButton>(R.id.btn_shield)?.setOnClickListener {
+            showClearDataDialog()
+        }
+        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
             showClearDataDialog()
         }
         addressBarText?.setOnClickListener {
@@ -189,15 +197,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NAYA: "X" Button Logic aur Search Suggestions
     private fun setupHomepage() {
         homepageSearchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // "X" button dikhana ya chhipana
                 btnClearInput?.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
-
-                // Search Suggestion Logic
                 val suggestionsEnabled = prefs.getBoolean("search_suggestions", true)
                 if (suggestionsEnabled && s != null && s.length > 2) {
                     txtSuggestion?.text = "Trending search: $s ..."
@@ -243,12 +247,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Address Bar Dialog Fix (Beautiful layout)
     private fun showAddressDialog() {
         val dialogLayout = LinearLayout(this)
         dialogLayout.orientation = LinearLayout.VERTICAL
         dialogLayout.setPadding(50, 40, 50, 10)
-
         val input = EditText(this)
         input.setText(if (webView.url == "about:blank") "" else webView.url)
         input.setSelection(input.text.length)
@@ -282,11 +284,6 @@ class MainActivity : AppCompatActivity() {
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun setupErrorPage() {
-        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener { lastFailedUrl?.let { loadUrlOrSearch(it) } }
-        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener { showHomepage() }
     }
 
     private fun setupBackPressHandler() {
@@ -326,6 +323,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // Auto-Updater Logic
     private fun checkForUpdates() {
         Thread {
             try {
@@ -334,11 +332,8 @@ class MainActivity : AppCompatActivity() {
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
-                val latestVersionTag = json.getString("tag_name")
-                val latestVersion = latestVersionTag.replace("v", "")
-                val currentVersion = "2.0.0"
-
-                if (latestVersion > currentVersion) {
+                val latestVersion = json.getString("tag_name").replace("v", "")
+                if (latestVersion > "2.0.0") {
                     val downloadUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
                     runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
                 }
@@ -367,10 +362,8 @@ class MainActivity : AppCompatActivity() {
                 val url = URL(apkUrl)
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.connect()
-
                 val apkFile = File(externalCacheDir, "kryptos_update.apk")
                 connection.inputStream.use { input -> apkFile.outputStream().use { output -> input.copyTo(output) } }
-
                 runOnUiThread {
                     progressDialog.dismiss()
                     installApk(apkFile)
@@ -406,11 +399,7 @@ class MainActivity : AppCompatActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            if (url != "about:blank") {
-                addressBarText?.text = url
-            } else {
-                addressBarText?.text = "kryptos://home"
-            }
+            addressBarText?.text = if (url != "about:blank") url else "kryptos://home"
             errorContainer?.visibility = View.GONE
         }
         override fun onPageFinished(view: WebView?, url: String?) {
@@ -422,8 +411,6 @@ class MainActivity : AppCompatActivity() {
             if (request?.isForMainFrame == true) {
                 val desc = error?.description?.toString() ?: "Unknown error"
                 lastFailedUrl = request.url.toString()
-                errorTitle?.text = getString(R.string.error_title)
-                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
                 errorContainer?.visibility = View.VISIBLE
                 homepageContainer?.visibility = View.GONE
             }
