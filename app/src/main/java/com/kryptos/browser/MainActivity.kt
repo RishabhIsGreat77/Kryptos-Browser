@@ -423,4 +423,22 @@ class MainActivity : AppCompatActivity() {
                 val desc = error?.description?.toString() ?: "Unknown error"
                 lastFailedUrl = request.url.toString()
                 errorTitle?.text = getString(R.string.error_title)
-                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n
+                errorMessage?.text = "${getString(R.string.error_message_generic)}\n\n($desc)"
+                errorContainer?.visibility = View.VISIBLE
+                homepageContainer?.visibility = View.GONE
+            }
+        }
+    }
+
+    inner class KryptosWebChromeClient : WebChromeClient() {
+        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+            super.onProgressChanged(view, newProgress)
+            if (newProgress < 100) {
+                progressBar?.visibility = View.VISIBLE
+                progressBar?.progress = newProgress
+            } else {
+                progressBar?.visibility = View.GONE
+            }
+        }
+    }
+}
