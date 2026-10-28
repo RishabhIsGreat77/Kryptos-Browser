@@ -10,12 +10,14 @@
 
         <!-- ORBITAL ANIMATION CONTAINER -->
         <FrameLayout
+            android:id="@+id/logo_container"
             android:layout_width="160dp" android:layout_height="160dp"
             android:layout_gravity="center_horizontal" android:layout_marginTop="16dp">
+            
             <ImageView
-                android:id="@+id/logo_container"
                 android:layout_width="match_parent" android:layout_height="match_parent"
                 android:src="@drawable/ic_kryptos_logo" />
+                
             <View android:id="@+id/dot1" android:layout_width="8dp" android:layout_height="8dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
             <View android:id="@+id/dot2" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
             <View android:id="@+id/dot3" android:layout_width="7dp" android:layout_height="7dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
@@ -27,7 +29,7 @@
             android:text="kryptos" android:textColor="@color/kryptos_text_primary"
             android:textSize="32sp" android:letterSpacing="0.05" />
 
-        <!-- Search Bar with "X" Button -->
+        <!-- Search Bar -->
         <LinearLayout
             android:layout_width="match_parent" android:layout_height="56dp"
             android:layout_marginTop="32dp" android:background="@drawable/bg_homepage_search"
@@ -45,27 +47,24 @@
                 android:textColorHint="@color/kryptos_text_secondary"
                 android:textColor="@color/kryptos_text_primary"
                 android:textSize="15sp" android:imeOptions="actionGo" android:inputType="textUri" />
-            <!-- NAYA: X BUTTON -->
+            <!-- X BUTTON -->
             <ImageView
                 android:id="@+id/btn_clear_input"
                 android:layout_width="20dp" android:layout_height="20dp"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:tint="@color/kryptos_text_secondary"
-                android:visibility="gone" /> <!-- शुरू में छिपा रहेगा -->
+                android:visibility="gone" />
         </LinearLayout>
 
-        <!-- NAYA: SEARCH SUGGESTIONS VIEW -->
+        <!-- SEARCH SUGGESTION -->
         <TextView
             android:id="@+id/txt_suggestion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:padding="12dp"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:padding="12dp"
             android:background="@drawable/bg_card"
             android:text="Trending: Weather today"
             android:textColor="@color/kryptos_text_secondary"
-            android:textSize="14sp"
-            android:visibility="gone" />
+            android:textSize="14sp" android:visibility="gone" />
 
         <!-- Engine Switcher -->
         <LinearLayout
@@ -81,6 +80,33 @@
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="Switch" android:textColor="@color/kryptos_text_primary"
                 android:textSize="12sp" android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- PRIVACY SHIELD CARD (वापस जोड़ दिया) -->
+        <LinearLayout
+            android:id="@+id/card_privacy_shield"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="32dp" android:background="@drawable/bg_card"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:padding="16dp" android:clickable="true" android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="32dp" android:layout_height="32dp"
+                android:src="@drawable/ic_shield" android:tint="@color/kryptos_text_primary" />
+
+            <LinearLayout
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginStart="16dp" android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Privacy Shield" android:textColor="@color/kryptos_text_primary"
+                    android:textSize="14sp" android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="Tap to clear browsing data"
+                    android:textColor="@color/kryptos_text_secondary" android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>
