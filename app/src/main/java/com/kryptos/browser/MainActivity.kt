@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
+    // FIXED: Ab har dot apne tilted orbit par ghoomega
     private fun startOrbitAnimation() {
         val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
@@ -95,22 +96,33 @@ class MainActivity : AppCompatActivity() {
             val rx = width * (30f / 96f)
             val ry = width * (8f / 96f)
 
-            animateDot(dot1, rx, ry, 4000, 0f)
-            animateDot(dot2, rx, ry, 5500, 60f)
-            animateDot(dot3, rx, ry, 7000, 120f)
+            // tiltAngle determines the angle of the orbit path itself
+            animateDot(dot1, rx, ry, 4000, 0.0)       // 0 degree tilt
+            animateDot(dot2, rx, ry, 5500, 60.0)      // 60 degree tilt
+            animateDot(dot3, rx, ry, 7000, 120.0)     // 120 degree tilt
         }
     }
 
-    private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, startAngle: Float) {
+    private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, tiltAngle: Double) {
         val animator = ValueAnimator.ofFloat(0f, 360f)
         animator.duration = duration
         animator.repeatCount = ValueAnimator.INFINITE
         animator.interpolator = LinearInterpolator()
 
         animator.addUpdateListener { animation ->
-            val angle = Math.toRadians((animation.animatedValue as Float + startAngle).toDouble())
-            dot.translationX = (rx * cos(angle)).toFloat()
-            dot.translationY = (ry * sin(angle)).toFloat()
+            val angle = Math.toRadians((animation.animatedValue as Float).toDouble())
+            
+            // Base ellipse coordinates
+            val x = rx * cos(angle)
+            val y = ry * sin(angle)
+
+            // Apply Rotation Matrix to tilt the orbit
+            val tiltRad = Math.toRadians(tiltAngle)
+            val rotatedX = x * cos(tiltRad) - y * sin(tiltRad)
+            val rotatedY = x * sin(tiltRad) + y * cos(tiltRad)
+
+            dot.translationX = rotatedX.toFloat()
+            dot.translationY = rotatedY.toFloat()
         }
         animator.start()
     }
@@ -130,8 +142,6 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        
-        // Desktop User-Agent (Fixes YouTube old version issue)
         settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
         webView.webViewClient = KryptosWebViewClient()
@@ -139,7 +149,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        // Address Bar Inline Actions
         addressBar?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val input = addressBar?.text.toString().trim()
@@ -148,7 +157,6 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        // UI Buttons (Now at the top)
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
             if (webView.canGoBack()) webView.goBack()
         }
@@ -161,13 +169,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepage()
         }
-        
-        // Tabs Button (V3 Message)
         findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
             Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
         }
-
-        // Settings Button
         findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
             try {
                 startActivity(Intent(this, SettingsActivity::class.java))
@@ -340,7 +344,6 @@ class MainActivity : AppCompatActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
-            // Update Top Address Bar
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
@@ -351,7 +354,6 @@ class MainActivity : AppCompatActivity() {
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
-                val desc = error?.description?.toString() ?: "Unknown error"
                 lastFailedUrl = request.url.toString()
                 errorContainer?.visibility = View.VISIBLE
                 homepageContainer?.visibility = View.GONE
