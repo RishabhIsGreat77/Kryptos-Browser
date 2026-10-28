@@ -50,7 +50,6 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
-    // Search Suggestions ke liye Handler (Debounce ke liye taaki har akshar par API na call ho)
     private val suggestionHandler = Handler(Looper.getMainLooper())
     private var suggestionRunnable: Runnable? = null
 
@@ -91,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
-    // FIXED: 3 Orbits with actual tilt
     private fun startOrbitAnimation() {
         val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
@@ -145,14 +143,15 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        
+        // UPDATED: Hybrid User-Agent (Fast Mobile + Kryptos Branding)
+        settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 KryptosBrowser/2.0"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
     }
 
     private fun setupToolbar() {
-        // FIXED: Address bar clear on click if it's home URL
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
                 addressBar?.setText("")
@@ -190,7 +189,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        // FIXED: Privacy Shield Listener wapas add kar diya
         findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
             showClearDataDialog()
         }
@@ -205,7 +203,6 @@ class MainActivity : AppCompatActivity() {
                 
                 val suggestionsEnabled = prefs.getBoolean("search_suggestions", true)
                 if (suggestionsEnabled && query.length > 1) {
-                    // FIXED: Asli Google API se suggestions fetch karna
                     fetchLiveSuggestions(query)
                 } else {
                     txtSuggestion?.visibility = View.GONE
@@ -248,7 +245,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NAYA: Live Google Suggestions Fetch Karne ka Logic
     private fun fetchLiveSuggestions(query: String) {
         suggestionRunnable?.let { suggestionHandler.removeCallbacks(it) }
         
@@ -265,19 +261,15 @@ class MainActivity : AppCompatActivity() {
                     if (suggestionsArray.length() > 0) {
                         val topSuggestion = suggestionsArray.getString(0)
                         runOnUiThread {
-                            // Check karo ki user ne tab tak kuch aur type toh nahi kiya
                             if (homepageSearchInput?.text.toString().trim() == query) {
                                 txtSuggestion?.text = topSuggestion
                                 txtSuggestion?.visibility = View.VISIBLE
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    // Agar internet nahi hai toh chupchap ignore karo
-                }
+                } catch (e: Exception) { }
             }.start()
         }
-        // 300ms delay (Debounce) taaki har akshar par API call na jaye
         suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
     }
 
@@ -337,7 +329,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // Auto-Updater Logic
     private fun checkForUpdates() {
         Thread {
             try {
