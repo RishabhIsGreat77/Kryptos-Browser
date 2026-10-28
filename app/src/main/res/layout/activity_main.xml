@@ -1,160 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/kryptos_background">
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/kryptos_background">
 
-    <!-- TOP BAR (Address & Shield) -->
+    <!-- TOP BAR -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="16dp"
-        android:layout_marginTop="8dp">
+        android:layout_width="match_parent" android:layout_height="56dp"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingHorizontal="16dp" android:layout_marginTop="8dp">
 
-        <!-- Address Bar Pill -->
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_address_bar_pill"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:layout_width="0dp" android:layout_height="44dp"
+            android:layout_weight="1" android:background="@drawable/bg_address_bar_pill"
+            android:orientation="horizontal" android:gravity="center_vertical"
             android:paddingHorizontal="16dp">
 
             <TextView
                 android:id="@+id/address_bar_text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="kryptos://home"
-                android:textColor="@color/kryptos_text_primary"
-                android:textSize="14sp"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="kryptos://home"
+                android:textColor="@color/kryptos_text_primary" android:textSize="14sp"
+                android:maxLines="1" android:ellipsize="end" />
 
             <ImageButton
                 android:id="@+id/btn_reload"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_reload"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/btn_reload" />
+                android:layout_width="24dp" android:layout_height="24dp"
+                android:src="@drawable/ic_reload" android:background="?attr/selectableItemBackgroundBorderless" />
         </LinearLayout>
 
-        <!-- Shield Icon -->
+        <!-- NAYA: FULLSCREEN BUTTON -->
+        <ImageButton
+            android:id="@+id/btn_fullscreen"
+            android:layout_width="44dp" android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            android:src="@android:drawable/ic_menu_crop"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/kryptos_text_secondary" />
+
         <ImageButton
             android:id="@+id/btn_shield"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="12dp"
+            android:layout_width="44dp" android:layout_height="44dp"
+            android:layout_marginStart="4dp"
             android:src="@drawable/ic_shield"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Privacy Shield" />
+            android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
 
-    <!-- (Hidden Address EditText for actual typing, we will link this later) -->
-    <EditText
-        android:id="@+id/address_bar"
-        android:layout_width="1dp"
-        android:layout_height="1dp"
-        android:visibility="invisible" />
-
-    <!-- Progress Bar -->
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:max="100"
-        android:progress="0"
-        android:progressTint="@color/kryptos_accent"
-        android:visibility="gone" />
+        android:layout_width="match_parent" android:layout_height="2dp"
+        android:max="100" android:progress="0"
+        android:progressTint="@color/kryptos_accent" android:visibility="gone" />
 
-    <!-- MAIN CONTENT AREA -->
+    <!-- MAIN CONTENT -->
     <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-        
-        <WebView
-            android:id="@+id/webview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <FrameLayout
-            android:id="@+id/homepage_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="visible">
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <WebView android:id="@+id/webview" android:layout_width="match_parent" android:layout_height="match_parent" />
+        <FrameLayout android:id="@+id/homepage_container" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="visible">
             <include layout="@layout/layout_homepage" />
         </FrameLayout>
-
-        <FrameLayout
-            android:id="@+id/error_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone">
+        <FrameLayout android:id="@+id/error_container" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
             <include layout="@layout/layout_error_page" />
         </FrameLayout>
     </FrameLayout>
 
-    <!-- BOTTOM NAVIGATION BAR -->
+    <!-- BOTTOM BAR (Only essential buttons, rest moved to Settings) -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="@color/kryptos_surface"
-        android:elevation="8dp"
-        android:paddingBottom="8dp">
+        android:layout_width="match_parent" android:layout_height="64dp"
+        android:orientation="horizontal" android:gravity="center"
+        android:background="@color/kryptos_surface" android:elevation="8dp" android:paddingBottom="8dp">
 
+        <ImageButton android:id="@+id/btn_back" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
+        <ImageButton android:id="@+id/btn_forward" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:src="@drawable/ic_forward" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
+        <ImageButton android:id="@+id/btn_home" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
+        
+        <!-- NAYA: SETTINGS BUTTON (Menu icon ki jagah) -->
         <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/ic_back"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
-
-        <ImageButton
-            android:id="@+id/btn_forward"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/ic_forward"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
-
-        <ImageButton
-            android:id="@+id/btn_home"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/ic_home"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
-
-        <ImageButton
-            android:id="@+id/btn_tabs"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/ic_tabs"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
-
-        <ImageButton
-            android:id="@+id/btn_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:src="@drawable/ic_menu_grid"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
+            android:id="@+id/btn_settings"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:src="@drawable/ic_menu_grid" <!-- Tune apna icon choose kar lena agar chaho -->
+            android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" />
     </LinearLayout>
-
 </LinearLayout>
