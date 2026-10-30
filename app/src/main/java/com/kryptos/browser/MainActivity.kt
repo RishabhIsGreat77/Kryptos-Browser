@@ -319,7 +319,7 @@ class MainActivity : AppCompatActivity() {
         val title = dialog.findViewById<TextView>(R.id.dialog_title)
         val message = dialog.findViewById<TextView>(R.id.dialog_message)
         val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
-        val btnConfirm = dialog.findViewById<TextView>(R.id.dialog_btn_confirm)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
 
         title.text = "Update Available"
         message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
