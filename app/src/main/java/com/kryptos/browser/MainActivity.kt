@@ -2,10 +2,13 @@ package com.kryptos.browser
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -13,6 +16,7 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.Window
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
@@ -24,7 +28,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import org.json.JSONArray
@@ -90,6 +93,9 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
+    // ==========================================
+    // ORBIT ANIMATION LOGIC
+    // ==========================================
     private fun startOrbitAnimation() {
         val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
@@ -132,6 +138,9 @@ class MainActivity : AppCompatActivity() {
         txtCurrentEngine?.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
     }
 
+    // ==========================================
+    // WEBVIEW SETUP
+    // ==========================================
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -144,13 +153,16 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // UPDATED: Hybrid User-Agent (Fast Mobile + Kryptos Branding)
+        // Hybrid User-Agent (Mobile + Kryptos Branding)
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 KryptosBrowser/2.0"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
     }
 
+    // ==========================================
+    // TOOLBAR SETUP
+    // ==========================================
     private fun setupToolbar() {
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
@@ -188,12 +200,11 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Settings error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
-        
-        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener {
-            showClearDataDialog()
-        }
     }
 
+    // ==========================================
+    // HOMEPAGE SETUP (Search, Suggestions)
+    // ==========================================
     private fun setupHomepage() {
         homepageSearchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -273,13 +284,53 @@ class MainActivity : AppCompatActivity() {
         suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
     }
 
+    // ==========================================
+    // CUSTOM SCI-FI DIALOGS
+    // ==========================================
     private fun showClearDataDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Privacy Shield")
-            .setMessage("Do you want to clear all browsing data?")
-            .setPositiveButton("Clear Data") { _, _ -> clearBrowsingData() }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val message = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
+
+        title.text = "Privacy Shield"
+        message.text = "Do you want to clear all browsing data (Cookies, Cache, and History)?"
+        btnConfirm.text = "Clear Data"
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            clearBrowsingData()
+        }
+        dialog.show()
+    }
+
+    private fun showUpdateDialog(version: String, downloadUrl: String) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val message = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.dialog_btn_confirm)
+
+        title.text = "Update Available"
+        message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
+        btnConfirm.text = "Update"
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            downloadAndInstallApk(downloadUrl)
+        }
+        dialog.show()
     }
 
     private fun clearBrowsingData() {
@@ -292,6 +343,9 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
+    // ==========================================
+    // NAVIGATION & SEARCH LOGIC
+    // ==========================================
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -329,6 +383,9 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // ==========================================
+    // AUTO-UPDATER (GITHUB API)
+    // ==========================================
     private fun checkForUpdates() {
         Thread {
             try {
@@ -344,16 +401,6 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) { }
         }.start()
-    }
-
-    private fun showUpdateDialog(version: String, downloadUrl: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Update Available")
-            .setMessage("A new version ($version) is available. Update now?")
-            .setCancelable(false)
-            .setPositiveButton("Update Now") { _, _ -> downloadAndInstallApk(downloadUrl) }
-            .setNegativeButton("Later", null)
-            .show()
     }
 
     private fun downloadAndInstallApk(apkUrl: String) {
@@ -400,6 +447,9 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    // ==========================================
+    // WEBVIEW CLIENTS
+    // ==========================================
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
