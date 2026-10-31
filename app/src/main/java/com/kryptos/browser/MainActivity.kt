@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.View
 import android.view.Window
 import android.view.animation.LinearInterpolator
@@ -93,24 +94,19 @@ class MainActivity : AppCompatActivity() {
         checkForUpdates()
     }
 
-    // ==========================================
-    // ORBIT ANIMATION LOGIC
-    // ==========================================
+    // बुलेटप्रूफ ऑर्बिट एनिमेशन (लाइट/डार्क दोनों में काम करेगा)
     private fun startOrbitAnimation() {
-        val container = findViewById<FrameLayout>(R.id.logo_container) ?: return
         val dot1 = findViewById<View>(R.id.dot1) ?: return
         val dot2 = findViewById<View>(R.id.dot2) ?: return
         val dot3 = findViewById<View>(R.id.dot3) ?: return
 
-        container.post {
-            val width = container.width.toFloat()
-            val rx = width * (30f / 96f)
-            val ry = width * (8f / 96f)
+        // हार्डकोडेड dp साइज़ (160dp कंटेनर के हिसाब से)
+        val rx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 50f, resources.displayMetrics)
+        val ry = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14f, resources.displayMetrics)
 
-            animateDot(dot1, rx, ry, 4000, 0.0)
-            animateDot(dot2, rx, ry, 5500, 60.0)
-            animateDot(dot3, rx, ry, 7000, 120.0)
-        }
+        animateDot(dot1, rx, ry, 4000, 0.0)
+        animateDot(dot2, rx, ry, 5500, 60.0)
+        animateDot(dot3, rx, ry, 7000, 120.0)
     }
 
     private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, tiltAngle: Double) {
@@ -138,9 +134,6 @@ class MainActivity : AppCompatActivity() {
         txtCurrentEngine?.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
     }
 
-    // ==========================================
-    // WEBVIEW SETUP
-    // ==========================================
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -153,16 +146,12 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // Hybrid User-Agent (Mobile + Kryptos Branding)
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 KryptosBrowser/2.0"
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
     }
 
-    // ==========================================
-    // TOOLBAR SETUP
-    // ==========================================
     private fun setupToolbar() {
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
@@ -202,9 +191,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // HOMEPAGE SETUP (Search, Suggestions)
-    // ==========================================
     private fun setupHomepage() {
         homepageSearchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -284,9 +270,7 @@ class MainActivity : AppCompatActivity() {
         suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
     }
 
-    // ==========================================
-    // CUSTOM SCI-FI DIALOGS
-    // ==========================================
+    // प्रीमियम Sci-Fi डायलॉग
     private fun showClearDataDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -324,6 +308,7 @@ class MainActivity : AppCompatActivity() {
         title.text = "Update Available"
         message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
         btnConfirm.text = "Update"
+        btnConfirm.setTextColor(Color.parseColor("#60A5FA"))
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
@@ -343,9 +328,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
-    // ==========================================
-    // NAVIGATION & SEARCH LOGIC
-    // ==========================================
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -383,9 +365,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // ==========================================
-    // AUTO-UPDATER (GITHUB API)
-    // ==========================================
     private fun checkForUpdates() {
         Thread {
             try {
@@ -447,9 +426,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // ==========================================
-    // WEBVIEW CLIENTS
-    // ==========================================
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
