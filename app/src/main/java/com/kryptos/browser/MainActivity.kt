@@ -1,6 +1,5 @@
 package com.kryptos.browser
 
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.app.ProgressDialog
@@ -15,10 +14,8 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.TypedValue
 import android.view.View
 import android.view.Window
-import android.view.animation.LinearInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
@@ -31,14 +28,13 @@ import android.webkit.WebViewClient
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URL
-import kotlin.math.cos
-import kotlin.math.sin
 import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : AppCompatActivity() {
@@ -48,16 +44,17 @@ class MainActivity : AppCompatActivity() {
     private var progressBar: ProgressBar? = null
     private var homepageContainer: FrameLayout? = null
     private var errorContainer: FrameLayout? = null
-    private var homepageSearchInput: EditText? = null
-    private var txtCurrentEngine: TextView? = null
-    private var btnClearInput: ImageView? = null
-    private var txtSuggestion: TextView? = null
+    private var bottomDock: LinearLayout? = null
+    private var txtTrackerCount: TextView? = null
+    
+    // Search Engine Switcher (Top Bar)
+    private var btnEngineSwitch: ImageView? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
-    private val suggestionHandler = Handler(Looper.getMainLooper())
-    private var suggestionRunnable: Runnable? = null
+    // Real-time Tracker Counter (Starts from 0 or saved value)
+    private var trackerCount = 0
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -80,96 +77,39 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
+        trackerCount = prefs.getInt("tracker_count", 0)
 
         webView = findViewById(R.id.webview)
         addressBar = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
-        homepageSearchInput = findViewById(R.id.homepage_search_input)
-        txtCurrentEngine = findViewById(R.id.txt_current_engine)
-        btnClearInput = findViewById(R.id.btn_clear_input)
-        txtSuggestion = findViewById(R.id.txt_suggestion)
+        bottomDock = findViewById(R.id.bottom_dock)
+        
+        // Homepage IDs
+        txtTrackerCount = findViewById(R.id.txt_tracker_count)
+        btnEngineSwitch = findViewById(R.id.btn_engine_switch)
 
-        updateEngineText()
+        updateTrackerUI()
         setupWebView()
         setupToolbar()
-        setupHomepage()
-        setupErrorPage()
         setupBackPressHandler()
-        startOrbitAnimation()
+
+        // Load Speed Dial and Add button
+        setupHomepageSpeedDial()
 
         checkForUpdates()
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Jab TabsActivity se wapas aaye, toh check karo kaunsa tab active hai
-        val activeTab = TabManager.getActiveTab()
-        if (activeTab != null) {
-            if (activeTab.url == "kryptos://home") {
-                showHomepageUI()
-            } else {
-                if (webView.url != activeTab.url) {
-                    loadUrlOrSearch(activeTab.url)
-                }
-            }
+    private fun updateTrackerUI() {
+        txtTrackerCount?.text = String.format("%,d", trackerCount)
+    }
+
+    private fun setupHomepageSpeedDial() {
+        // Dummy function for Speed Dial (Will be fully functional in next step)
+        findViewById<LinearLayout>(R.id.btn_add_speed_dial)?.setOnClickListener {
+            Toast.makeText(this, "Add Speed Dial coming soon!", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun startOrbitAnimation() {
-        val dot1 = findViewById<View>(R.id.dot1) ?: return
-        val dot2 = findViewById<View>(R.id.dot2) ?: return
-        val dot3 = findViewById<View>(R.id.dot3) ?: return
-
-        val rx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 50f, resources.displayMetrics)
-        val ry = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14f, resources.displayMetrics)
-
-        animateDot(dot1, rx, ry, 4000, 0.0)
-        animateDot(dot2, rx, ry, 5500, 60.0)
-        animateDot(dot3, rx, ry, 7000, 120.0)
-    }
-
-    private fun animateDot(dot: View, rx: Float, ry: Float, duration: Long, tiltAngle: Double) {
-        val animator = ValueAnimator.ofFloat(0f, 360f)
-        animator.duration = duration
-        animator.repeatCount = ValueAnimator.INFINITE
-        animator.interpolator = LinearInterpolator()
-
-        animator.addUpdateListener { animation ->
-            val angle = Math.toRadians((animation.animatedValue as Float).toDouble())
-            val x = rx * cos(angle)
-            val y = ry * sin(angle)
-
-            val tiltRad = Math.toRadians(tiltAngle)
-            val rotatedX = x * cos(tiltRad) - y * sin(tiltRad)
-            val rotatedY = x * sin(tiltRad) + y * cos(tiltRad)
-
-            dot.translationX = rotatedX.toFloat()
-            dot.translationY = rotatedY.toFloat()
-        }
-        animator.start()
-    }
-
-    private fun updateEngineText() {
-        txtCurrentEngine?.text = "Engine: ${searchEngines[selectedEngineIndex].first}"
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun setupWebView() {
-        val settings = webView.settings
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.loadWithOverviewMode = true
-        settings.useWideViewPort = true
-        settings.builtInZoomControls = true
-        settings.displayZoomControls = false
-        settings.allowFileAccess = false
-        settings.allowContentAccess = false
-        settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 KryptosBrowser/2.0"
-
-        webView.webViewClient = KryptosWebViewClient()
-        webView.webChromeClient = KryptosWebChromeClient()
     }
 
     private fun setupToolbar() {
@@ -187,77 +127,8 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
-            if (webView.canGoBack()) webView.goBack()
-        }
-        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener {
-            if (webView.canGoForward()) webView.goForward()
-        }
-        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener {
-            if (webView.url != null) webView.reload()
-        }
-        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
-            showHomepageUI()
-        }
-        
-        // NAYA: Tabs button ab TabsActivity khol dega
-        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
-            startActivity(Intent(this, TabsActivity::class.java))
-        }
-        
-        findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
-            try {
-                startActivity(Intent(this, SettingsActivity::class.java))
-            } catch (e: Exception) {
-                Toast.makeText(this, "Settings error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun setupHomepage() {
-        txtSuggestion?.setOnClickListener {
-            val suggestion = txtSuggestion?.text.toString().trim()
-            if (suggestion.isNotEmpty()) {
-                homepageSearchInput?.setText(suggestion)
-                loadUrlOrSearch(suggestion)
-                txtSuggestion?.visibility = View.GONE
-            }
-        }
-
-        homepageSearchInput?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s.toString().trim()
-                btnClearInput?.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
-                
-                val suggestionsEnabled = prefs.getBoolean("search_suggestions", true)
-                if (suggestionsEnabled && query.length > 1) {
-                    fetchLiveSuggestions(query)
-                } else {
-                    txtSuggestion?.visibility = View.GONE
-                }
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
-        btnClearInput?.setOnClickListener {
-            homepageSearchInput?.text?.clear()
-            txtSuggestion?.visibility = View.GONE
-        }
-
-        homepageSearchInput?.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_GO) {
-                val input = homepageSearchInput?.text.toString().trim()
-                if (input.isNotEmpty()) {
-                    loadUrlOrSearch(input)
-                    homepageSearchInput?.text?.clear()
-                    txtSuggestion?.visibility = View.GONE
-                }
-                true
-            } else false
-        }
-
-        findViewById<TextView>(R.id.btn_switch_engine)?.setOnClickListener { view ->
+        // Top Bar: Search Engine Switch (Chota sa icon)
+        btnEngineSwitch?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             for (i in searchEngines.indices) {
                 val check = if (i == selectedEngineIndex) " ✓" else ""
@@ -266,105 +137,74 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 selectedEngineIndex = item.itemId
                 prefs.edit().putInt("default_search_engine", selectedEngineIndex).apply()
-                updateEngineText()
                 Toast.makeText(this, "${searchEngines[selectedEngineIndex].first} selected", Toast.LENGTH_SHORT).show()
                 true
             }
             popup.show()
         }
-    }
 
-    private fun fetchLiveSuggestions(query: String) {
-        suggestionRunnable?.let { suggestionHandler.removeCallbacks(it) }
-        
-        suggestionRunnable = Runnable {
-            Thread {
-                try {
-                    val url = URL("https://suggestqueries.google.com/complete/search?client=chrome&q=${Uri.encode(query)}")
-                    val connection = url.openConnection() as HttpsURLConnection
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    
-                    val jsonArray = JSONArray(response)
-                    val suggestionsArray = jsonArray.getJSONArray(1)
-                    
-                    if (suggestionsArray.length() > 0) {
-                        val topSuggestion = suggestionsArray.getString(0)
-                        runOnUiThread {
-                            if (homepageSearchInput?.text.toString().trim() == query) {
-                                txtSuggestion?.text = topSuggestion
-                                txtSuggestion?.visibility = View.VISIBLE
-                            }
-                        }
-                    }
-                } catch (e: Exception) { }
-            }.start()
+        // Top Bar: Reload
+        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener {
+            if (webView.url != null) webView.reload()
         }
-        suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
-    }
 
-    private fun showClearDataDialog() {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_custom)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val title = dialog.findViewById<TextView>(R.id.dialog_title)
-        val message = dialog.findViewById<TextView>(R.id.dialog_message)
-        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
-        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
-
-        title.text = "Privacy Shield"
-        message.text = "Do you want to clear all browsing data (Cookies, Cache, and History)?"
-        btnConfirm.text = "Clear Data"
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            clearBrowsingData()
+        // Bottom Dock Buttons
+        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
+            if (webView.canGoBack()) webView.goBack()
         }
-        dialog.show()
-    }
-
-    private fun showUpdateDialog(version: String, downloadUrl: String) {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_custom)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val title = dialog.findViewById<TextView>(R.id.dialog_title)
-        val message = dialog.findViewById<TextView>(R.id.dialog_message)
-        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
-        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
-
-        title.text = "Update Available"
-        message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
-        btnConfirm.text = "Update"
-        btnConfirm.setTextColor(Color.parseColor("#60A5FA"))
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            downloadAndInstallApk(downloadUrl)
+        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener {
+            if (webView.canGoForward()) webView.goForward()
         }
-        dialog.show()
-    }
-
-    private fun clearBrowsingData() {
-        webView.clearCache(true)
-        webView.clearHistory()
-        WebStorage.getInstance().deleteAllData()
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies(null)
-        cookieManager.flush()
-        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun setupErrorPage() {
-        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
             showHomepageUI()
         }
-        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
-            lastFailedUrl?.let { loadUrlOrSearch(it) }
+        
+        // NAYA: Fire Button (Clear Data)
+        findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener {
+            showClearDataDialog()
+        }
+
+        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
+            startActivity(Intent(this, TabsActivity::class.java))
+        }
+
+        // NAYA: Menu Button (Settings, Incognito, History, Dark Mode)
+        findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
+            val popup = PopupMenu(this, view)
+            
+            val isDark = prefs.getBoolean("dark_mode", true)
+            val themeText = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
+            
+            popup.menu.add(0, 1, 1, "Incognito Mode")
+            popup.menu.add(0, 2, 2, "History")
+            popup.menu.add(0, 3, 3, themeText)
+            popup.menu.add(0, 4, 4, "Settings")
+
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> {
+                        Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                    2 -> {
+                        Toast.makeText(this, "History coming soon!", Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                    3 -> {
+                        val newMode = !isDark
+                        prefs.edit().putBoolean("dark_mode", newMode).apply()
+                        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+                        recreate()
+                        true
+                    }
+                    4 -> {
+                        startActivity(Intent(this, SettingsActivity::class.java))
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
         }
     }
 
@@ -383,6 +223,45 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun showClearDataDialog() {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val message = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
+
+        title.text = "Clear Data"
+        message.text = "Do you want to clear all browsing data (Cookies, Cache, and History)?"
+        btnConfirm.text = "Clear Data"
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            clearBrowsingData()
+        }
+        dialog.show()
+    }
+
+    private fun clearBrowsingData() {
+        webView.clearCache(true)
+        webView.clearHistory()
+        WebStorage.getInstance().deleteAllData()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.flush()
+        
+        // Reset tracker count when data is cleared
+        trackerCount = 0
+        prefs.edit().putInt("tracker_count", 0).apply()
+        updateTrackerUI()
+        
+        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
+    }
+
     private fun loadUrlOrSearch(input: String) {
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
@@ -390,11 +269,13 @@ class MainActivity : AppCompatActivity() {
             searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
         
-        // TabManager me current tab ka URL update karo
         TabManager.updateActiveTabTitle(url, url)
         
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
+        bottomDock?.visibility = View.GONE // Hide dock on search
+        
+        addressBar?.setText(url)
         webView.loadUrl(url)
     }
 
@@ -405,8 +286,42 @@ class MainActivity : AppCompatActivity() {
         
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
+        bottomDock?.visibility = View.VISIBLE // Show dock on homepage
+        
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupWebView() {
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
+        settings.builtInZoomControls = true
+        settings.displayZoomControls = false
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
+        
+        settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        
+        webView.webViewClient = KryptosWebViewClient()
+        webView.webChromeClient = KryptosWebChromeClient()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val activeTab = TabManager.getActiveTab()
+        if (activeTab != null) {
+            if (activeTab.url == "kryptos://home") {
+                showHomepageUI()
+            } else {
+                if (webView.url != activeTab.url) {
+                    loadUrlOrSearch(activeTab.url)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -414,6 +329,63 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // NAYA: Tracker Counter Logic
+    inner class KryptosWebViewClient : WebViewClient() {
+        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+            val url = request?.url.toString().lowercase()
+            for (domain in blockedDomains) {
+                if (url.contains(domain)) {
+                    // Tracker Blocked! Increase the count
+                    trackerCount++
+                    prefs.edit().putInt("tracker_count", trackerCount).apply()
+                    runOnUiThread { updateTrackerUI() }
+                    
+                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
+                }
+            }
+            return super.shouldInterceptRequest(view, request)
+        }
+
+        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
+        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
+            errorContainer?.visibility = View.GONE
+        }
+        
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            progressBar?.visibility = View.GONE
+            
+            if (url != "about:blank" && url != null) {
+                val title = view?.title ?: "New Tab"
+                TabManager.updateActiveTabTitle(title, url)
+            }
+        }
+        
+        override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+            super.onReceivedError(view, request, error)
+            if (request?.isForMainFrame == true) {
+                lastFailedUrl = request.url.toString()
+                errorContainer?.visibility = View.VISIBLE
+                homepageContainer?.visibility = View.GONE
+            }
+        }
+    }
+
+    inner class KryptosWebChromeClient : WebChromeClient() {
+        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+            super.onProgressChanged(view, newProgress)
+            if (newProgress < 100) {
+                progressBar?.visibility = View.VISIBLE
+                progressBar?.progress = newProgress
+            } else {
+                progressBar?.visibility = View.GONE
+            }
+        }
+    }
+
+    // Auto-Updater Logic (Bumped to 3.0.0)
     private fun checkForUpdates() {
         Thread {
             try {
@@ -429,6 +401,30 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) { }
         }.start()
+    }
+
+    private fun showUpdateDialog(version: String, downloadUrl: String) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val message = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
+
+        title.text = "Update Available"
+        message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
+        btnConfirm.text = "Update"
+        btnConfirm.setTextColor(Color.parseColor("#00E676")) // Green color for Update
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            downloadAndInstallApk(downloadUrl)
+        }
+        dialog.show()
     }
 
     private fun downloadAndInstallApk(apkUrl: String) {
@@ -473,53 +469,5 @@ class MainActivity : AppCompatActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(intent)
-    }
-
-    inner class KryptosWebViewClient : WebViewClient() {
-        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-            val url = request?.url.toString().lowercase()
-            for (domain in blockedDomains) {
-                if (url.contains(domain)) {
-                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
-                }
-            }
-            return super.shouldInterceptRequest(view, request)
-        }
-
-        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
-        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-            super.onPageStarted(view, url, favicon)
-            addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
-            errorContainer?.visibility = View.GONE
-        }
-        override fun onPageFinished(view: WebView?, url: String?) {
-            super.onPageFinished(view, url)
-            progressBar?.visibility = View.GONE
-            // Page load hone ke baad Tab ka title update karo
-            if (url != "about:blank" && url != null) {
-                val title = view?.title ?: "New Tab"
-                TabManager.updateActiveTabTitle(title, url)
-            }
-        }
-        override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-            super.onReceivedError(view, request, error)
-            if (request?.isForMainFrame == true) {
-                lastFailedUrl = request.url.toString()
-                errorContainer?.visibility = View.VISIBLE
-                homepageContainer?.visibility = View.GONE
-            }
-        }
-    }
-
-    inner class KryptosWebChromeClient : WebChromeClient() {
-        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-            super.onProgressChanged(view, newProgress)
-            if (newProgress < 100) {
-                progressBar?.visibility = View.VISIBLE
-                progressBar?.progress = newProgress
-            } else {
-                progressBar?.visibility = View.GONE
-            }
-        }
     }
 }
