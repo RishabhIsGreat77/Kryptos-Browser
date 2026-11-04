@@ -33,6 +33,8 @@
         <!-- NAYA: SettingsActivity को रजिस्टर किया (क्रैश खत्म) -->
         <activity android:name=".SettingsActivity" />
 
+        <activity android:name=".TabsActivity" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
