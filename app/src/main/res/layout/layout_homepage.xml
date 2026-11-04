@@ -1,112 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:fillViewport="true" android:background="@color/kryptos_background">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/kryptos_background">
 
     <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:paddingHorizontal="20dp"
-        android:paddingTop="24dp" android:paddingBottom="40dp">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="40dp"
+        android:paddingBottom="40dp"
+        android:gravity="center_horizontal">
 
-        <!-- ORBITAL ANIMATION CONTAINER -->
-        <FrameLayout
-            android:id="@+id/logo_container"
-            android:layout_width="160dp" android:layout_height="160dp"
-            android:layout_gravity="center_horizontal" android:layout_marginTop="16dp">
-            
-            <ImageView
-                android:layout_width="match_parent" android:layout_height="match_parent"
-                android:src="@drawable/ic_kryptos_logo" />
-                
-            <View android:id="@+id/dot1" android:layout_width="8dp" android:layout_height="8dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
-            <View android:id="@+id/dot2" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
-            <View android:id="@+id/dot3" android:layout_width="7dp" android:layout_height="7dp" android:layout_gravity="center" android:background="@drawable/bg_dot" />
-        </FrameLayout>
+        <!-- Fingerprint Logo -->
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/ic_fingerprint" />
 
+        <!-- KRYPTOS Wordmark -->
         <TextView
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal" android:layout_marginTop="16dp"
-            android:text="kryptos" android:textColor="@color/kryptos_text_primary"
-            android:textSize="32sp" android:letterSpacing="0.05" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="KRYPTOS"
+            android:textColor="@color/kryptos_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.15" />
 
-        <!-- Search Bar -->
+        <!-- Subtitle -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="SECURE CONNECTION ACTIVE"
+            android:textColor="@color/kryptos_primary"
+            android:textSize="10sp"
+            android:letterSpacing="0.1" />
+
+        <!-- Speed Dial Grid (4 Items) -->
         <LinearLayout
-            android:layout_width="match_parent" android:layout_height="56dp"
-            android:layout_marginTop="32dp" android:background="@drawable/bg_homepage_search"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:paddingHorizontal="16dp">
-            <ImageView
-                android:layout_width="20dp" android:layout_height="20dp"
-                android:src="@drawable/ic_search_engine" android:tint="@color/kryptos_text_secondary" />
-            <EditText
-                android:id="@+id/homepage_search_input"
-                android:layout_width="0dp" android:layout_height="match_parent"
-                android:layout_weight="1" android:layout_marginStart="12dp"
-                android:background="@android:color/transparent"
-                android:hint="Search or type URL..."
-                android:textColorHint="@color/kryptos_text_secondary"
-                android:textColor="@color/kryptos_text_primary"
-                android:textSize="15sp" android:imeOptions="actionGo" android:inputType="textUri" />
-            <!-- X BUTTON -->
-            <ImageView
-                android:id="@+id/btn_clear_input"
-                android:layout_width="20dp" android:layout_height="20dp"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="@color/kryptos_text_secondary"
-                android:visibility="gone" />
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false"
+            android:gravity="center">
+
+            <!-- Item 1: GitHub -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_card"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_search_engine"
+                    android:tint="@color/kryptos_primary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="GitHub"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Item 2: Reddit -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_card"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_search_engine"
+                    android:tint="@color/kryptos_primary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Reddit"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Item 3: YouTube -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_card"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_search_engine"
+                    android:tint="@color/kryptos_primary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="YouTube"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Item 4: Add Button -->
+            <LinearLayout
+                android:id="@+id/btn_add_speed_dial"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_card"
+                    android:padding="16dp"
+                    android:src="@android:drawable/ic_input_add"
+                    android:tint="@color/kryptos_text_secondary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Add"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- SEARCH SUGGESTION -->
-        <TextView
-            android:id="@+id/txt_suggestion"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:padding="12dp"
+        <!-- Trackers Blocked Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
             android:background="@drawable/bg_card"
-            android:text="Trending: Weather today"
-            android:textColor="@color/kryptos_text_secondary"
-            android:textSize="14sp" android:visibility="gone" />
-
-        <!-- Engine Switcher -->
-        <LinearLayout
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView
-                android:id="@+id/txt_current_engine"
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Engine: Google"
-                android:textColor="@color/kryptos_text_secondary" android:textSize="12sp" />
-            <TextView
-                android:id="@+id/btn_switch_engine"
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Switch" android:textColor="@color/kryptos_text_primary"
-                android:textSize="12sp" android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- PRIVACY SHIELD CARD (वापस जोड़ दिया) -->
-        <LinearLayout
-            android:id="@+id/card_privacy_shield"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="32dp" android:background="@drawable/bg_card"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:padding="16dp" android:clickable="true" android:focusable="true"
-            android:foreground="?attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="32dp" android:layout_height="32dp"
-                android:src="@drawable/ic_shield" android:tint="@color/kryptos_text_primary" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="20dp">
 
             <LinearLayout
-                android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:layout_marginStart="16dp" android:orientation="vertical">
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
                 <TextView
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="Privacy Shield" android:textColor="@color/kryptos_text_primary"
-                    android:textSize="14sp" android:textStyle="bold" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Trackers Blocked"
+                    android:textColor="@color/kryptos_text_secondary"
+                    android:textSize="14sp" />
+
                 <TextView
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="Tap to clear browsing data"
-                    android:textColor="@color/kryptos_text_secondary" android:textSize="12sp" />
+                    android:id="@+id/txt_tracker_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="1,402"
+                    android:textColor="@color/kryptos_text_primary"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
             </LinearLayout>
+
+            <!-- Simple Icon (Can be replaced with Circular Progress later) -->
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_shield"
+                android:tint="@color/kryptos_primary" />
         </LinearLayout>
 
     </LinearLayout>
