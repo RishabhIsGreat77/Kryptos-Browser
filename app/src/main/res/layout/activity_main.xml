@@ -1,32 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:background="@color/kryptos_background">
 
-    <!-- TOP BAR (Address Bar & Reload) -->
+    <!-- TOP BAR -->
     <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical"
-        android:paddingHorizontal="16dp" android:layout_marginTop="12dp">
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        app:layout_constraintTop_toTopOf="parent">
 
+        <!-- Shield Icon (Top Left) -->
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_shield"
+            android:tint="@color/kryptos_primary" />
+
+        <!-- Address Bar Pill -->
         <LinearLayout
-            android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
             android:background="@drawable/bg_address_bar_pill"
-            android:orientation="horizontal" android:gravity="center_vertical"
-            android:paddingHorizontal="16dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp">
+
+            <!-- Chota Search Engine Icon -->
+            <ImageView
+                android:id="@+id/btn_engine_switch"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_search_engine"
+                android:tint="@color/kryptos_text_secondary"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="2dp" />
 
             <EditText
                 android:id="@+id/address_bar"
-                android:layout_width="0dp" android:layout_height="match_parent"
-                android:layout_weight="1" android:text="kryptos://home"
-                android:textColor="@color/kryptos_text_primary" android:textSize="16sp"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="kryptos://home"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="14sp"
                 android:background="@android:color/transparent"
-                android:imeOptions="actionGo" android:inputType="textUri"
-                android:maxLines="1" android:selectAllOnFocus="true" />
+                android:imeOptions="actionGo"
+                android:inputType="textUri"
+                android:maxLines="1"
+                android:selectAllOnFocus="true" />
 
             <ImageButton
                 android:id="@+id/btn_reload"
-                android:layout_width="28dp" android:layout_height="28dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:src="@drawable/ic_reload"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:tint="@color/kryptos_text_secondary" />
@@ -37,50 +73,69 @@
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent" android:layout_height="2dp"
-        android:layout_below="@id/address_bar"
-        android:layout_marginTop="12dp"
-        android:max="100" android:progress="0"
-        android:progressTint="@color/kryptos_accent" android:visibility="gone" />
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="@color/kryptos_primary"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/top_bar"
+        android:layout_marginTop="4dp"/>
 
     <!-- MAIN CONTENT -->
     <FrameLayout
-        android:layout_width="match_parent" android:layout_height="match_parent"
-        android:layout_below="@id/progress_bar"
-        android:layout_marginBottom="80dp"> 
-        
-        <WebView 
-            android:id="@+id/webview" 
-            android:layout_width="match_parent" android:layout_height="match_parent" />
-            
-        <FrameLayout 
-            android:id="@+id/homepage_container" 
-            android:layout_width="match_parent" android:layout_height="match_parent" 
+        android:id="@+id/content_frame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/progress_bar"
+        app:layout_constraintBottom_toTopOf="@id/bottom_dock">
+
+        <WebView
+            android:id="@+id/webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <FrameLayout
+            android:id="@+id/homepage_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:visibility="visible">
             <include layout="@layout/layout_homepage" />
         </FrameLayout>
-        
-        <FrameLayout 
-            android:id="@+id/error_container" 
-            android:layout_width="match_parent" android:layout_height="match_parent" 
+
+        <FrameLayout
+            android:id="@+id/error_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:visibility="gone">
             <include layout="@layout/layout_error_page" />
         </FrameLayout>
     </FrameLayout>
 
-    <!-- FLOATING BOTTOM DOCK -->
+    <!-- FLOATING BOTTOM DOCK (6 Buttons) -->
     <LinearLayout
-        android:layout_width="wrap_content" android:layout_height="64dp"
-        android:layout_alignParentBottom="true" android:layout_centerHorizontal="true"
-        android:layout_marginBottom="24dp" android:background="@drawable/bg_bottom_dock"
-        android:elevation="12dp" android:orientation="horizontal"
-        android:gravity="center" android:paddingHorizontal="16dp">
+        android:id="@+id/bottom_dock"
+        android:layout_width="wrap_content"
+        android:layout_height="64dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/bg_bottom_dock"
+        android:elevation="12dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingHorizontal="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageButton android:id="@+id/btn_back" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="12dp" />
-        <ImageButton android:id="@+id/btn_forward" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_forward" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="12dp" />
-        <ImageButton android:id="@+id/btn_home" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="12dp" />
-        <ImageButton android:id="@+id/btn_tabs" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_tabs" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="12dp" />
-        <ImageButton android:id="@+id/btn_settings" android:layout_width="48dp" android:layout_height="48dp" android:src="@android:drawable/ic_menu_preferences" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="12dp" />
+        <ImageButton android:id="@+id/btn_back" android:layout_width="40dp" android:layout_height="48dp" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="8dp" />
+        <ImageButton android:id="@+id/btn_forward" android:layout_width="40dp" android:layout_height="48dp" android:src="@drawable/ic_forward" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="8dp" />
+        <ImageButton android:id="@+id/btn_home" android:layout_width="40dp" android:layout_height="48dp" android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="8dp" />
+        
+        <!-- Fire Button (Clear Data) -->
+        <ImageButton android:id="@+id/btn_fire" android:layout_width="48dp" android:layout_height="48dp" android:src="@android:drawable/ic_menu_delete" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_primary" android:padding="10dp" />
+        
+        <ImageButton android:id="@+id/btn_tabs" android:layout_width="40dp" android:layout_height="48dp" android:src="@drawable/ic_tabs" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="8dp" />
+        <ImageButton android:id="@+id/btn_menu" android:layout_width="40dp" android:layout_height="48dp" android:src="@drawable/ic_menu" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_icon_tint" android:padding="8dp" />
     </LinearLayout>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
