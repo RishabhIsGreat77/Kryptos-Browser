@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/kryptos_background">
+
+    <!-- Top Bar (Title + Add Button) -->
+    <LinearLayout
+        android:id="@+id/tabs_top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Tabs"
+            android:textColor="@color/kryptos_text_primary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Naya Tab (+) Button -->
+        <ImageButton
+            android:id="@+id/btn_new_tab"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_input_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/kryptos_icon_tint" />
+    </LinearLayout>
+
+    <!-- Grid View for Tabs -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/tabs_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/tabs_top_bar"
+        android:padding="8dp"
+        android:clipToPadding="false" />
+
+</RelativeLayout>
