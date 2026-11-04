@@ -69,7 +69,6 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedEngineIndex = 0
 
-    // Basic Tracker Blocklist (Bug 1 Fix)
     private val blockedDomains = listOf(
         "doubleclick.net", "google-analytics.com", "googletagmanager.com",
         "facebook.com/tr", "scorecardresearch.com", "adservice.google.com"
@@ -101,6 +100,21 @@ class MainActivity : AppCompatActivity() {
         startOrbitAnimation()
 
         checkForUpdates()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Jab TabsActivity se wapas aaye, toh check karo kaunsa tab active hai
+        val activeTab = TabManager.getActiveTab()
+        if (activeTab != null) {
+            if (activeTab.url == "kryptos://home") {
+                showHomepageUI()
+            } else {
+                if (webView.url != activeTab.url) {
+                    loadUrlOrSearch(activeTab.url)
+                }
+            }
+        }
     }
 
     private fun startOrbitAnimation() {
@@ -183,11 +197,14 @@ class MainActivity : AppCompatActivity() {
             if (webView.url != null) webView.reload()
         }
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
-            showHomepage()
+            showHomepageUI()
         }
+        
+        // NAYA: Tabs button ab TabsActivity khol dega
         findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
-            Toast.makeText(this, "Tabs coming in V3!", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, TabsActivity::class.java))
         }
+        
         findViewById<ImageButton>(R.id.btn_settings)?.setOnClickListener {
             try {
                 startActivity(Intent(this, SettingsActivity::class.java))
@@ -198,7 +215,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupHomepage() {
-        // FIX BUG 2: Suggestion ko clickable banaya
         txtSuggestion?.setOnClickListener {
             val suggestion = txtSuggestion?.text.toString().trim()
             if (suggestion.isNotEmpty()) {
@@ -343,33 +359,25 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
-    // FIX BUG 3: Error page se homepage par wapas aane ka button
     private fun setupErrorPage() {
         findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
-            showHomepage()
+            showHomepageUI()
         }
-        // Agar layout me retry button hai toh uske liye
         findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
             lastFailedUrl?.let { loadUrlOrSearch(it) }
         }
     }
 
-    // FIX BUG 4: New Back Button Logic (User Request)
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // 1. Agar Homepage par hain, toh kuch mat karo (app band nahi hoga)
                 if (homepageContainer?.visibility == View.VISIBLE) {
                     return
                 }
-                
-                // 2. Agar webview me pichle page par ja sakte hain, toh piche jao
                 if (webView.canGoBack()) {
                     webView.goBack()
-                } 
-                // 3. Agar aur piche nahi ja sakte (jaise error page par), toh homepage par chale jao
-                else {
-                    showHomepage()
+                } else {
+                    showHomepageUI()
                 }
             }
         })
@@ -381,14 +389,20 @@ class MainActivity : AppCompatActivity() {
         } else {
             searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
+        
+        // TabManager me current tab ka URL update karo
+        TabManager.updateActiveTabTitle(url, url)
+        
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
         webView.loadUrl(url)
     }
 
-    private fun showHomepage() {
+    private fun showHomepageUI() {
         webView.loadUrl("about:blank")
-        webView.clearHistory() // History clear taaki back dabane par wapas error na aaye
+        webView.clearHistory()
+        TabManager.updateActiveTabTitle("Home", "kryptos://home")
+        
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
         addressBar?.setText("kryptos://home")
@@ -409,7 +423,7 @@ class MainActivity : AppCompatActivity() {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
                 val latestVersion = json.getString("tag_name").replace("v", "")
-                if (latestVersion > "2.0.0") {
+                if (latestVersion > "3.0.0") {
                     val downloadUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
                     runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
                 }
@@ -462,7 +476,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class KryptosWebViewClient : WebViewClient() {
-        // FIX BUG 1: Ads aur Trackers ko block karne ka logic
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
             for (domain in blockedDomains) {
@@ -479,10 +492,18 @@ class MainActivity : AppCompatActivity() {
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
+        
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar?.visibility = View.GONE
+            
+            // Page load hone ke baad Tab ka title update karo
+            if (url != "about:blank") {
+                val title = view?.title ?: "New Tab"
+                TabManager.updateActiveTabTitle(title, url)
+            }
         }
+        
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
