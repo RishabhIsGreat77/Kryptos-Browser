@@ -24,6 +24,7 @@ import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -33,6 +34,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URL
 import kotlin.math.cos
@@ -67,6 +69,12 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedEngineIndex = 0
 
+    // Basic Tracker Blocklist (Bug 1 Fix)
+    private val blockedDomains = listOf(
+        "doubleclick.net", "google-analytics.com", "googletagmanager.com",
+        "facebook.com/tr", "scorecardresearch.com", "adservice.google.com"
+    )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
@@ -88,19 +96,18 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupToolbar()
         setupHomepage()
+        setupErrorPage()
         setupBackPressHandler()
         startOrbitAnimation()
 
         checkForUpdates()
     }
 
-    // बुलेटप्रूफ ऑर्बिट एनिमेशन (लाइट/डार्क दोनों में काम करेगा)
     private fun startOrbitAnimation() {
         val dot1 = findViewById<View>(R.id.dot1) ?: return
         val dot2 = findViewById<View>(R.id.dot2) ?: return
         val dot3 = findViewById<View>(R.id.dot3) ?: return
 
-        // हार्डकोडेड dp साइज़ (160dp कंटेनर के हिसाब से)
         val rx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 50f, resources.displayMetrics)
         val ry = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14f, resources.displayMetrics)
 
@@ -145,7 +152,6 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 KryptosBrowser/2.0"
 
         webView.webViewClient = KryptosWebViewClient()
@@ -192,6 +198,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupHomepage() {
+        // FIX BUG 2: Suggestion ko clickable banaya
+        txtSuggestion?.setOnClickListener {
+            val suggestion = txtSuggestion?.text.toString().trim()
+            if (suggestion.isNotEmpty()) {
+                homepageSearchInput?.setText(suggestion)
+                loadUrlOrSearch(suggestion)
+                txtSuggestion?.visibility = View.GONE
+            }
+        }
+
         homepageSearchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -248,7 +264,7 @@ class MainActivity : AppCompatActivity() {
         suggestionRunnable = Runnable {
             Thread {
                 try {
-                    val url = URL("https://suggestqueries.google.com/complete/search?client=firefox&q=${Uri.encode(query)}")
+                    val url = URL("https://suggestqueries.google.com/complete/search?client=chrome&q=${Uri.encode(query)}")
                     val connection = url.openConnection() as HttpsURLConnection
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     
@@ -270,7 +286,6 @@ class MainActivity : AppCompatActivity() {
         suggestionHandler.postDelayed(suggestionRunnable!!, 300L)
     }
 
-    // प्रीमियम Sci-Fi डायलॉग
     private fun showClearDataDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -328,14 +343,33 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
+    // FIX BUG 3: Error page se homepage par wapas aane ka button
+    private fun setupErrorPage() {
+        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
+            showHomepage()
+        }
+        // Agar layout me retry button hai toh uske liye
+        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
+            lastFailedUrl?.let { loadUrlOrSearch(it) }
+        }
+    }
+
+    // FIX BUG 4: New Back Button Logic (User Request)
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                when {
-                    errorContainer?.visibility == View.VISIBLE -> showHomepage()
-                    homepageContainer?.visibility == View.VISIBLE -> finish()
-                    webView.canGoBack() -> webView.goBack()
-                    else -> finish()
+                // 1. Agar Homepage par hain, toh kuch mat karo (app band nahi hoga)
+                if (homepageContainer?.visibility == View.VISIBLE) {
+                    return
+                }
+                
+                // 2. Agar webview me pichle page par ja sakte hain, toh piche jao
+                if (webView.canGoBack()) {
+                    webView.goBack()
+                } 
+                // 3. Agar aur piche nahi ja sakte (jaise error page par), toh homepage par chale jao
+                else {
+                    showHomepage()
                 }
             }
         })
@@ -354,6 +388,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showHomepage() {
         webView.loadUrl("about:blank")
+        webView.clearHistory() // History clear taaki back dabane par wapas error na aaye
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
         addressBar?.setText("kryptos://home")
@@ -427,6 +462,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class KryptosWebViewClient : WebViewClient() {
+        // FIX BUG 1: Ads aur Trackers ko block karne ka logic
+        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+            val url = request?.url.toString().lowercase()
+            for (domain in blockedDomains) {
+                if (url.contains(domain)) {
+                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
+                }
+            }
+            return super.shouldInterceptRequest(view, request)
+        }
+
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
