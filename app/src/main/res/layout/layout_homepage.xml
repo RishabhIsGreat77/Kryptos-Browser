@@ -11,14 +11,15 @@
         android:orientation="vertical"
         android:paddingHorizontal="24dp"
         android:paddingTop="40dp"
-        android:paddingBottom="40dp"
+        android:paddingBottom="100dp"
         android:gravity="center_horizontal">
 
-        <!-- Fingerprint Logo -->
+        <!-- Fingerprint Logo (Green Glow) -->
         <ImageView
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:src="@drawable/ic_fingerprint" />
+            android:src="@drawable/ic_fingerprint"
+            android:tint="@color/kryptos_primary" />
 
         <!-- KRYPTOS Wordmark -->
         <TextView
@@ -27,7 +28,7 @@
             android:layout_marginTop="16dp"
             android:text="KRYPTOS"
             android:textColor="@color/kryptos_text_primary"
-            android:textSize="26sp"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:letterSpacing="0.15" />
 
@@ -58,12 +59,12 @@
                 android:orientation="vertical"
                 android:gravity="center">
                 <ImageView
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_card"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_speed_dial_icon"
                     android:padding="16dp"
-                    android:src="@drawable/ic_search_engine"
-                    android:tint="@color/kryptos_primary" />
+                    android:src="@drawable/ic_search_engine" 
+                    android:tint="#FFFFFF" /> <!-- Yahan GitHub ka icon aayega baad me -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -81,12 +82,12 @@
                 android:orientation="vertical"
                 android:gravity="center">
                 <ImageView
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_card"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_speed_dial_icon"
                     android:padding="16dp"
-                    android:src="@drawable/ic_search_engine"
-                    android:tint="@color/kryptos_primary" />
+                    android:src="@drawable/ic_search_engine" 
+                    android:tint="#FF4500" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -104,12 +105,12 @@
                 android:orientation="vertical"
                 android:gravity="center">
                 <ImageView
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_card"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_speed_dial_icon"
                     android:padding="16dp"
-                    android:src="@drawable/ic_search_engine"
-                    android:tint="@color/kryptos_primary" />
+                    android:src="@drawable/ic_search_engine" 
+                    android:tint="#FF0000" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -119,7 +120,7 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Item 4: Add Button -->
+            <!-- Item 4: Add Button (Dashed) -->
             <LinearLayout
                 android:id="@+id/btn_add_speed_dial"
                 android:layout_width="0dp"
@@ -130,9 +131,9 @@
                 android:clickable="true"
                 android:focusable="true">
                 <ImageView
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_card"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_add_dashed"
                     android:padding="16dp"
                     android:src="@android:drawable/ic_input_add"
                     android:tint="@color/kryptos_text_secondary" />
@@ -169,23 +170,46 @@
                     android:textColor="@color/kryptos_text_secondary"
                     android:textSize="14sp" />
 
-                <TextView
-                    android:id="@+id/txt_tracker_count"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="1,402"
-                    android:textColor="@color/kryptos_text_primary"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="bottom">
+                    
+                    <TextView
+                        android:id="@+id/txt_tracker_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1,402"
+                        android:textColor="@color/kryptos_text_primary"
+                        android:textSize="28sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="4dp"
+                        android:text="+12 today"
+                        android:textColor="@color/kryptos_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Simple Icon (Can be replaced with Circular Progress later) -->
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_shield"
-                android:tint="@color/kryptos_primary" />
+            <!-- Right Side Circular Shield -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_fire_glow">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_shield"
+                    android:tint="@color/kryptos_text_secondary" />
+            </FrameLayout>
         </LinearLayout>
 
     </LinearLayout>
