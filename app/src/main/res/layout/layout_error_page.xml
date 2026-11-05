@@ -7,12 +7,13 @@
     android:background="@color/kryptos_background"
     android:padding="@dimen/space_xl">
 
-    <!-- Warning icon -->
+    <!-- NAYA: Fingerprint Logo -->
     <ImageView
         android:id="@+id/error_icon"
-        android:layout_width="@dimen/error_icon_size"
-        android:layout_height="@dimen/error_icon_size"
-        android:src="@drawable/ic_kryptos_logo"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_fingerprint"
+        android:tint="@color/kryptos_error"
         android:contentDescription="@null" />
 
     <!-- Error title -->
