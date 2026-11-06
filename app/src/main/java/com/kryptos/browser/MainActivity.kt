@@ -314,18 +314,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkForUpdates() {
+       private fun checkForUpdates() {
+        Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
+        
         Thread {
             try {
                 val url = URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                // 1. FIXED: GitHub requires User-Agent
                 connection.setRequestProperty("User-Agent", "KryptosBrowser-Updater") 
                 
                 val responseCode = connection.responseCode
                 if (responseCode != 200) {
-                    runOnUiThread { Toast.makeText(this@MainActivity, "GitHub API Error: $responseCode", Toast.LENGTH_LONG).show() }
+                    runOnUiThread { Toast.makeText(this@MainActivity, "Error: GitHub API returned $responseCode", Toast.LENGTH_LONG).show() }
                     return@Thread
                 }
 
@@ -335,13 +336,14 @@ class MainActivity : AppCompatActivity() {
                 val latestVersionTag = json.getString("tag_name") 
                 val latestVersion = latestVersionTag.replace("v", "").replace("-beta", "").trim()
                 
-                // 2. FAKE VERSION FOR TESTING: Make it think it's 2.0.0
+                // Testing version
                 val currentVersion = "2.0.0" 
+
+                runOnUiThread { Toast.makeText(this@MainActivity, "Latest: $latestVersion, Current: $currentVersion", Toast.LENGTH_LONG).show() }
 
                 if (latestVersion > currentVersion) {
                     val assets = json.getJSONArray("assets")
                     if (assets.length() > 0) {
-                        // 3. FIXED: Find the actual APK in assets
                         var downloadUrl = ""
                         for (i in 0 until assets.length()) {
                             val asset = assets.getJSONObject(i)
@@ -354,20 +356,20 @@ class MainActivity : AppCompatActivity() {
                         if (downloadUrl.isNotEmpty()) {
                             runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
                         } else {
-                            runOnUiThread { Toast.makeText(this@MainActivity, "APK not found in Release!", Toast.LENGTH_LONG).show() }
+                            runOnUiThread { Toast.makeText(this@MainActivity, "Error: APK asset not found in release!", Toast.LENGTH_LONG).show() }
                         }
                     } else {
-                        runOnUiThread { Toast.makeText(this@MainActivity, "No assets found in Release!", Toast.LENGTH_LONG).show() }
+                        runOnUiThread { Toast.makeText(this@MainActivity, "Error: No assets in release!", Toast.LENGTH_LONG).show() }
                     }
                 } else {
-                     runOnUiThread { Toast.makeText(this@MainActivity, "App is up to date (Fake: v$currentVersion)", Toast.LENGTH_SHORT).show() }
+                     runOnUiThread { Toast.makeText(this@MainActivity, "App is already up to date!", Toast.LENGTH_SHORT).show() }
                 }
             } catch (e: Exception) {
-                runOnUiThread { Toast.makeText(this@MainActivity, "Update Check Failed: ${e.message}", Toast.LENGTH_LONG).show() }
+                runOnUiThread { Toast.makeText(this@MainActivity, "Crash Error: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }.start()
     }
-
+       
     private fun showUpdateDialog(version: String, downloadUrl: String) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
