@@ -311,32 +311,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // FIXED AUTO-UPDATER
     private fun checkForUpdates() {
         Thread {
             try {
                 val url = URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
                 val connection = url.openConnection() as HttpsURLConnection
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                // 1. FIXED: GitHub requires User-Agent
+                connection.setRequestProperty("User-Agent", "KryptosBrowser-Updater") 
+                
+                val responseCode = connection.responseCode
+                if (responseCode != 200) {
+                    runOnUiThread { Toast.makeText(this@MainActivity, "GitHub API Error: $responseCode", Toast.LENGTH_LONG).show() }
+                    return@Thread
+                }
+
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
                 
-                // Tag name nikal rahe hain (e.g. "v3.0.0")
                 val latestVersionTag = json.getString("tag_name") 
                 val latestVersion = latestVersionTag.replace("v", "").replace("-beta", "").trim()
                 
-                val currentVersion = "3.0.0" // V3 ki version
+                // 2. FAKE VERSION FOR TESTING: Make it think it's 2.0.0
+                val currentVersion = "2.0.0" 
 
                 if (latestVersion > currentVersion) {
                     val assets = json.getJSONArray("assets")
                     if (assets.length() > 0) {
-                        val downloadUrl = assets.getJSONObject(0).getString("browser_download_url")
-                        runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
+                        // 3. FIXED: Find the actual APK in assets
+                        var downloadUrl = ""
+                        for (i in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(i)
+                            if (asset.getString("name").endsWith(".apk")) {
+                                downloadUrl = asset.getString("browser_download_url")
+                                break
+                            }
+                        }
+                        
+                        if (downloadUrl.isNotEmpty()) {
+                            runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
+                        } else {
+                            runOnUiThread { Toast.makeText(this@MainActivity, "APK not found in Release!", Toast.LENGTH_LONG).show() }
+                        }
+                    } else {
+                        runOnUiThread { Toast.makeText(this@MainActivity, "No assets found in Release!", Toast.LENGTH_LONG).show() }
                     }
+                } else {
+                     runOnUiThread { Toast.makeText(this@MainActivity, "App is up to date (Fake: v$currentVersion)", Toast.LENGTH_SHORT).show() }
                 }
             } catch (e: Exception) {
-                // Agar error aata hai to log karo
-                runOnUiThread { Toast.makeText(this@MainActivity, "Update check failed", Toast.LENGTH_SHORT).show() }
+                runOnUiThread { Toast.makeText(this@MainActivity, "Update Check Failed: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }.start()
     }
