@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var errorContainer: FrameLayout? = null
     private var bottomDock: LinearLayout? = null
     private var txtTrackerCount: TextView? = null
+    private var txtTabCount: TextView? = null
     
     private var btnEngineSwitch: ImageView? = null
 
@@ -79,19 +80,26 @@ class MainActivity : AppCompatActivity() {
         errorContainer = findViewById(R.id.error_container)
         bottomDock = findViewById(R.id.bottom_dock)
         txtTrackerCount = findViewById(R.id.txt_tracker_count)
+        txtTabCount = findViewById(R.id.txt_tab_count)
         btnEngineSwitch = findViewById(R.id.btn_engine_switch)
 
         updateTrackerUI()
+        updateTabCountUI()
         setupWebView()
         setupToolbar()
         setupBackPressHandler()
         setupHomepageSpeedDial()
 
+        // Call the updater here
         checkForUpdates()
     }
 
     private fun updateTrackerUI() {
         txtTrackerCount?.text = String.format("%,d", trackerCount)
+    }
+
+    private fun updateTabCountUI() {
+        txtTabCount?.text = TabManager.tabsList.size.toString()
     }
 
     private fun setupHomepageSpeedDial() {
@@ -106,9 +114,6 @@ class MainActivity : AppCompatActivity() {
                 addressBar?.setText("")
             }
         }
-    private fun updateTabCountUI() {
-        findViewById<TextView>(R.id.txt_tab_count)?.text = TabManager.tabsList.size.toString()
-    }
 
         addressBar?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
@@ -135,9 +140,10 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener { webView.reload() }
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
-        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener { if (webView.canGoForward()) webView.goForward() }
-        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         
+        // Forward button code REMOVED as the button no longer exists in XML
+        
+        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
 
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
@@ -256,6 +262,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        updateTabCountUI() // Update tab count when coming back from TabsActivity
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
@@ -314,7 +321,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-       private fun checkForUpdates() {
+    // AUTO-UPDATER DEBUG CODE (Now safely at class level)
+    private fun checkForUpdates() {
         Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
         
         Thread {
@@ -336,8 +344,7 @@ class MainActivity : AppCompatActivity() {
                 val latestVersionTag = json.getString("tag_name") 
                 val latestVersion = latestVersionTag.replace("v", "").replace("-beta", "").trim()
                 
-                // Testing version
-                val currentVersion = "2.0.0" 
+                val currentVersion = "2.0.0" // Fake version for testing
 
                 runOnUiThread { Toast.makeText(this@MainActivity, "Latest: $latestVersion, Current: $currentVersion", Toast.LENGTH_LONG).show() }
 
@@ -369,7 +376,7 @@ class MainActivity : AppCompatActivity() {
             }
         }.start()
     }
-       
+
     private fun showUpdateDialog(version: String, downloadUrl: String) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
