@@ -106,6 +106,9 @@ class MainActivity : AppCompatActivity() {
                 addressBar?.setText("")
             }
         }
+    private fun updateTabCountUI() {
+        findViewById<TextView>(R.id.txt_tab_count)?.text = TabManager.tabsList.size.toString()
+    }
 
         addressBar?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
