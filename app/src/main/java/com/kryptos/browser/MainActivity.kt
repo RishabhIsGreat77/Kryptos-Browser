@@ -10,10 +10,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.View
 import android.view.Window
 import android.view.inputmethod.EditorInfo
@@ -30,7 +26,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.FileProvider
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -47,13 +42,11 @@ class MainActivity : AppCompatActivity() {
     private var bottomDock: LinearLayout? = null
     private var txtTrackerCount: TextView? = null
     
-    // Search Engine Switcher (Top Bar)
     private var btnEngineSwitch: ImageView? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
 
-    // Real-time Tracker Counter (Starts from 0 or saved value)
     private var trackerCount = 0
 
     private val searchEngines = listOf(
@@ -85,8 +78,6 @@ class MainActivity : AppCompatActivity() {
         homepageContainer = findViewById(R.id.homepage_container)
         errorContainer = findViewById(R.id.error_container)
         bottomDock = findViewById(R.id.bottom_dock)
-        
-        // Homepage IDs
         txtTrackerCount = findViewById(R.id.txt_tracker_count)
         btnEngineSwitch = findViewById(R.id.btn_engine_switch)
 
@@ -94,8 +85,6 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupToolbar()
         setupBackPressHandler()
-
-        // Load Speed Dial and Add button
         setupHomepageSpeedDial()
 
         checkForUpdates()
@@ -106,7 +95,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupHomepageSpeedDial() {
-        // Dummy function for Speed Dial (Will be fully functional in next step)
         findViewById<LinearLayout>(R.id.btn_add_speed_dial)?.setOnClickListener {
             Toast.makeText(this, "Add Speed Dial coming soon!", Toast.LENGTH_SHORT).show()
         }
@@ -127,7 +115,6 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        // Top Bar: Search Engine Switch (Chota sa icon)
         btnEngineSwitch?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             for (i in searchEngines.indices) {
@@ -143,35 +130,19 @@ class MainActivity : AppCompatActivity() {
             popup.show()
         }
 
-        // Top Bar: Reload
-        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener {
-            if (webView.url != null) webView.reload()
-        }
-
-        // Bottom Dock Buttons
-        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener {
-            if (webView.canGoBack()) webView.goBack()
-        }
-        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener {
-            if (webView.canGoForward()) webView.goForward()
-        }
-        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener {
-            showHomepageUI()
-        }
+        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener { webView.reload() }
+        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
+        findViewById<ImageButton>(R.id.btn_forward)?.setOnClickListener { if (webView.canGoForward()) webView.goForward() }
+        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         
-        // NAYA: Fire Button (Clear Data)
-        findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener {
-            showClearDataDialog()
-        }
+        findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
 
-        findViewById<ImageButton>(R.id.btn_tabs)?.setOnClickListener {
+        findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
 
-        // NAYA: Menu Button (Settings, Incognito, History, Dark Mode)
         findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
-            
             val isDark = prefs.getBoolean("dark_mode", true)
             val themeText = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
             
@@ -182,25 +153,15 @@ class MainActivity : AppCompatActivity() {
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> {
-                        Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show()
-                        true
-                    }
-                    2 -> {
-                        Toast.makeText(this, "History coming soon!", Toast.LENGTH_SHORT).show()
-                        true
-                    }
+                    1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
+                    2 -> { Toast.makeText(this, "History coming soon!", Toast.LENGTH_SHORT).show(); true }
                     3 -> {
                         val newMode = !isDark
                         prefs.edit().putBoolean("dark_mode", newMode).apply()
                         AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-                        recreate()
-                        true
+                        recreate(); true
                     }
-                    4 -> {
-                        startActivity(Intent(this, SettingsActivity::class.java))
-                        true
-                    }
+                    4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
                     else -> false
                 }
             }
@@ -211,14 +172,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (homepageContainer?.visibility == View.VISIBLE) {
-                    return
-                }
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    showHomepageUI()
-                }
+                if (homepageContainer?.visibility == View.VISIBLE) return
+                if (webView.canGoBack()) webView.goBack() else showHomepageUI()
             }
         })
     }
@@ -235,31 +190,22 @@ class MainActivity : AppCompatActivity() {
         val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
 
         title.text = "Clear Data"
-        message.text = "Do you want to clear all browsing data (Cookies, Cache, and History)?"
+        message.text = "Do you want to clear all browsing data?"
         btnConfirm.text = "Clear Data"
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            clearBrowsingData()
+            webView.clearCache(true)
+            webView.clearHistory()
+            WebStorage.getInstance().deleteAllData()
+            CookieManager.getInstance().removeAllCookies(null)
+            trackerCount = 0
+            prefs.edit().putInt("tracker_count", 0).apply()
+            updateTrackerUI()
+            Toast.makeText(this, "Browsing data cleared!", Toast.LENGTH_SHORT).show()
         }
         dialog.show()
-    }
-
-    private fun clearBrowsingData() {
-        webView.clearCache(true)
-        webView.clearHistory()
-        WebStorage.getInstance().deleteAllData()
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies(null)
-        cookieManager.flush()
-        
-        // Reset tracker count when data is cleared
-        trackerCount = 0
-        prefs.edit().putInt("tracker_count", 0).apply()
-        updateTrackerUI()
-        
-        Toast.makeText(this, "Browsing data cleared successfully.", Toast.LENGTH_SHORT).show()
     }
 
     private fun loadUrlOrSearch(input: String) {
@@ -270,11 +216,9 @@ class MainActivity : AppCompatActivity() {
         }
         
         TabManager.updateActiveTabTitle(url, url)
-        
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
-        bottomDock?.visibility = View.GONE // Hide dock on search
-        
+        bottomDock?.visibility = View.GONE
         addressBar?.setText(url)
         webView.loadUrl(url)
     }
@@ -283,11 +227,9 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("about:blank")
         webView.clearHistory()
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
-        
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
-        bottomDock?.visibility = View.VISIBLE // Show dock on homepage
-        
+        bottomDock?.visibility = View.VISIBLE
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
     }
@@ -303,7 +245,6 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
         
         webView.webViewClient = KryptosWebViewClient()
@@ -316,10 +257,8 @@ class MainActivity : AppCompatActivity() {
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
                 showHomepageUI()
-            } else {
-                if (webView.url != activeTab.url) {
-                    loadUrlOrSearch(activeTab.url)
-                }
+            } else if (webView.url != activeTab.url) {
+                loadUrlOrSearch(activeTab.url)
             }
         }
     }
@@ -329,17 +268,14 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // NAYA: Tracker Counter Logic
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
             for (domain in blockedDomains) {
                 if (url.contains(domain)) {
-                    // Tracker Blocked! Increase the count
                     trackerCount++
                     prefs.edit().putInt("tracker_count", trackerCount).apply()
                     runOnUiThread { updateTrackerUI() }
-                    
                     return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
                 }
             }
@@ -352,17 +288,11 @@ class MainActivity : AppCompatActivity() {
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
-        
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar?.visibility = View.GONE
-            
-            if (url != "about:blank" && url != null) {
-                val title = view?.title ?: "New Tab"
-                TabManager.updateActiveTabTitle(title, url)
-            }
+            if (url != "about:blank" && url != null) TabManager.updateActiveTabTitle(view?.title ?: "New Tab", url)
         }
-        
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
@@ -376,16 +306,12 @@ class MainActivity : AppCompatActivity() {
     inner class KryptosWebChromeClient : WebChromeClient() {
         override fun onProgressChanged(view: WebView?, newProgress: Int) {
             super.onProgressChanged(view, newProgress)
-            if (newProgress < 100) {
-                progressBar?.visibility = View.VISIBLE
-                progressBar?.progress = newProgress
-            } else {
-                progressBar?.visibility = View.GONE
-            }
+            if (newProgress < 100) { progressBar?.visibility = View.VISIBLE; progressBar?.progress = newProgress }
+            else { progressBar?.visibility = View.GONE }
         }
     }
 
-    // Auto-Updater Logic (Bumped to 3.0.0)
+    // FIXED AUTO-UPDATER
     private fun checkForUpdates() {
         Thread {
             try {
@@ -394,12 +320,24 @@ class MainActivity : AppCompatActivity() {
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
-                val latestVersion = json.getString("tag_name").replace("v", "")
-                if (latestVersion > "3.0.0") {
-                    val downloadUrl = json.getJSONArray("assets").getJSONObject(0).getString("browser_download_url")
-                    runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
+                
+                // Tag name nikal rahe hain (e.g. "v3.0.0")
+                val latestVersionTag = json.getString("tag_name") 
+                val latestVersion = latestVersionTag.replace("v", "").replace("-beta", "").trim()
+                
+                val currentVersion = "3.0.0" // V3 ki version
+
+                if (latestVersion > currentVersion) {
+                    val assets = json.getJSONArray("assets")
+                    if (assets.length() > 0) {
+                        val downloadUrl = assets.getJSONObject(0).getString("browser_download_url")
+                        runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
+                    }
                 }
-            } catch (e: Exception) { }
+            } catch (e: Exception) {
+                // Agar error aata hai to log karo
+                runOnUiThread { Toast.makeText(this@MainActivity, "Update check failed", Toast.LENGTH_SHORT).show() }
+            }
         }.start()
     }
 
@@ -417,7 +355,7 @@ class MainActivity : AppCompatActivity() {
         title.text = "Update Available"
         message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
         btnConfirm.text = "Update"
-        btnConfirm.setTextColor(Color.parseColor("#00E676")) // Green color for Update
+        btnConfirm.setTextColor(Color.parseColor("#00E676"))
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
@@ -440,15 +378,9 @@ class MainActivity : AppCompatActivity() {
                 connection.connect()
                 val apkFile = File(externalCacheDir, "kryptos_update.apk")
                 connection.inputStream.use { input -> apkFile.outputStream().use { output -> input.copyTo(output) } }
-                runOnUiThread {
-                    progressDialog.dismiss()
-                    installApk(apkFile)
-                }
+                runOnUiThread { progressDialog.dismiss(); installApk(apkFile) }
             } catch (e: Exception) {
-                runOnUiThread {
-                    progressDialog.dismiss()
-                    Toast.makeText(this, "Update failed: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                runOnUiThread { progressDialog.dismiss(); Toast.makeText(this, "Update failed: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }.start()
     }
