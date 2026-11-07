@@ -99,9 +99,6 @@ class MainActivity : AppCompatActivity() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
 
-    // ==========================================
-    // SPEED DIAL LOGIC
-    // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
@@ -113,34 +110,39 @@ class MainActivity : AppCompatActivity() {
             saveSpeedDials(dials)
         }
 
-        val colors = intArrayOf(
-            Color.parseColor("#FF5722"),
-            Color.parseColor("#2196F3"),
-            Color.parseColor("#9C27B0"),
-            Color.parseColor("#E91E63"),
-            Color.parseColor("#00BCD4")
-        )
-
         for ((index, dial) in dials.withIndex()) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
             
+            val iconImg = itemView.findViewById<ImageView>(R.id.sd_icon)
             val letterText = itemView.findViewById<TextView>(R.id.sd_letter)
             val nameText = itemView.findViewById<TextView>(R.id.sd_name)
 
-            letterText.text = dial.first.substring(0, 1).uppercase()
             nameText.text = dial.first
 
-            val color = colors[index % colors.size]
-            val bgDrawable = GradientDrawable()
-            bgDrawable.shape = GradientDrawable.OVAL
-            
-            // SAFE HEX CONVERSION
-            val hexColor = String.format("#1A%06X", (0xFFFFFF and color))
-            bgDrawable.setColor(Color.parseColor(hexColor))
-            bgDrawable.setStroke(2, color)
-            
-            (letterText.parent as FrameLayout).background = bgDrawable
-            letterText.setTextColor(color)
+            // Check if it's a default site to show its real icon
+            when (dial.first.lowercase()) {
+                "github" -> {
+                    iconImg.setImageResource(R.drawable.ic_github)
+                    iconImg.visibility = View.VISIBLE
+                    letterText.visibility = View.GONE
+                }
+                "reddit" -> {
+                    iconImg.setImageResource(R.drawable.ic_reddit)
+                    iconImg.visibility = View.VISIBLE
+                    letterText.visibility = View.GONE
+                }
+                "youtube" -> {
+                    iconImg.setImageResource(R.drawable.ic_youtube)
+                    iconImg.visibility = View.VISIBLE
+                    letterText.visibility = View.GONE
+                }
+                else -> {
+                    // For custom sites, show the first letter (Monochrome style)
+                    iconImg.visibility = View.GONE
+                    letterText.visibility = View.VISIBLE
+                    letterText.text = dial.first.substring(0, 1).uppercase()
+                }
+            }
 
             itemView.setOnClickListener {
                 loadUrlOrSearch(dial.second)
@@ -156,6 +158,31 @@ class MainActivity : AppCompatActivity() {
             speedDialGrid?.addView(itemView)
         }
 
+        // Add "+ Add" button at the end
+        val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
+        val addIcon = addBtnView.findViewById<ImageView>(R.id.sd_icon)
+        val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
+        val addName = addBtnView.findViewById<TextView>(R.id.sd_name)
+        
+        addIcon.visibility = View.GONE
+        addLetter.visibility = View.VISIBLE
+        addLetter.text = "+"
+        addLetter.setTextColor(Color.parseColor("#8B8B93"))
+        addName.text = "Add"
+        
+        addBtnView.setOnClickListener {
+            showAddSpeedDialDialog()
+        }
+
+        val addParams = GridLayout.LayoutParams()
+        addParams.width = 0
+        addParams.height = GridLayout.LayoutParams.WRAP_CONTENT
+        addParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+        addParams.setMargins(8, 8, 8, 8)
+        addBtnView.layoutParams = addParams
+
+        speedDialGrid?.addView(addBtnView)
+    }
         // Add "+ Add" button
         val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
         val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
