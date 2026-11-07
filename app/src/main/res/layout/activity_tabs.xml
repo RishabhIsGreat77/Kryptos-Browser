@@ -4,7 +4,6 @@
     android:layout_height="match_parent"
     android:background="@color/kryptos_background">
 
-    <!-- Top Bar (Title + Add Button) -->
     <LinearLayout
         android:id="@+id/tabs_top_bar"
         android:layout_width="match_parent"
@@ -22,17 +21,26 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
-        <!-- Naya Tab (+) Button -->
+        <!-- NAYA: Incognito Tab Button -->
+        <ImageButton
+            android:id="@+id/btn_new_incognito_tab"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_shield"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/kryptos_primary" 
+            android:layout_marginEnd="8dp"/>
+
+        <!-- New Tab (+) Button -->
         <ImageButton
             android:id="@+id/btn_new_tab"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@android:drawable/ic_input_add"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@color/kryptos_icon_tint" />
+            android:tint="@color/kryptos_text_primary" />
     </LinearLayout>
 
-    <!-- Grid View for Tabs -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tabs_recycler_view"
         android:layout_width="match_parent"
