@@ -73,7 +73,7 @@
         app:layout_constraintTop_toBottomOf="@id/top_bar"
         android:layout_marginTop="8dp"/>
 
-    <!-- MAIN CONTENT: WebView goes all the way to the bottom -->
+    <!-- MAIN CONTENT (WebView goes all the way to the bottom) -->
     <FrameLayout
         android:id="@+id/content_frame"
         android:layout_width="match_parent"
@@ -103,7 +103,7 @@
         </FrameLayout>
     </FrameLayout>
 
-    <!-- FLOATING BOTTOM DOCK -->
+    <!-- FLOATING BOTTOM DOCK (5 Buttons) -->
     <LinearLayout
         android:id="@+id/bottom_dock"
         android:layout_width="match_parent"
@@ -117,9 +117,13 @@
         android:paddingHorizontal="8dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Back -->
         <ImageButton android:id="@+id/btn_back" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@drawable/ic_back" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
+        
+        <!-- Home -->
         <ImageButton android:id="@+id/btn_home" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@drawable/ic_home" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
         
+        <!-- CENTER FIRE BUTTON (Glowing) -->
         <FrameLayout
             android:layout_width="64dp"
             android:layout_height="64dp"
@@ -129,11 +133,13 @@
                 android:layout_width="match_parent" 
                 android:layout_height="match_parent" 
                 android:layout_margin="6dp"
-                android:src="@drawable/ic_shield" 
+                android:src="@drawable/ic_fire" 
                 android:background="@drawable/bg_fire_glow" 
-                android:tint="@color/kryptos_primary" />
+                android:tint="@color/kryptos_primary" 
+                android:contentDescription="Clear Data" />
         </FrameLayout>
 
+        <!-- Tabs (Square Box with Number) -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_weight="1"
@@ -148,6 +154,7 @@
                 android:gravity="center"
                 android:textSize="12sp"
                 android:textColor="@color/kryptos_text_primary" />
+            <!-- Invisible click area for Tabs -->
             <View
                 android:id="@+id/btn_tabs"
                 android:layout_width="match_parent"
@@ -157,7 +164,9 @@
                 android:background="?attr/selectableItemBackgroundBorderless" />
         </FrameLayout>
 
+        <!-- Menu -->
         <ImageButton android:id="@+id/btn_menu" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@drawable/ic_menu" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
