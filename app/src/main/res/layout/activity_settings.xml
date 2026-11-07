@@ -65,4 +65,15 @@
         android:textSize="16sp"
         android:paddingVertical="16dp"/>
 
+    <!-- NAYA: Check for Updates Option -->
+    <TextView
+        android:id="@+id/txt_check_updates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Check for Updates"
+        android:textColor="@color/kryptos_primary"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:paddingVertical="16dp"/>
+
 </LinearLayout>
