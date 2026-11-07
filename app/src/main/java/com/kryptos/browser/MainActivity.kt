@@ -246,7 +246,11 @@ class MainActivity : AppCompatActivity() {
         TabManager.updateActiveTabTitle(url, url)
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
-        bottomDock?.visibility = View.GONE
+        
+        // NAYA: Website par dock ka background gayab kar do, sirf icons rakho
+        bottomDock?.setBackgroundColor(Color.TRANSPARENT)
+        bottomDock?.elevation = 0f
+        
         addressBar?.setText(url)
         webView.loadUrl(url)
     }
@@ -257,7 +261,11 @@ class MainActivity : AppCompatActivity() {
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
-        bottomDock?.visibility = View.VISIBLE
+        
+        // NAYA: Homepage par wapas se sundar dock laga do
+        bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
+        bottomDock?.elevation = 12f
+        
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
     }
