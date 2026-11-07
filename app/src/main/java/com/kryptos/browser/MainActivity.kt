@@ -228,6 +228,12 @@ class MainActivity : AppCompatActivity() {
             webView.clearHistory()
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
+            
+            TabManager.tabsList.clear()
+            TabManager.addNewTab("kryptos://home", "Home")
+            updateTabCountUI()
+            showHomepageUI()
+            
             trackerCount = 0
             prefs.edit().putInt("tracker_count", 0).apply()
             updateTrackerUI()
