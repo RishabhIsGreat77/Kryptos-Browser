@@ -7,7 +7,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -32,6 +31,7 @@ import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
 
+    // --- VARIABLES DECLARATION ---
     private lateinit var webView: WebView
     private var addressBar: EditText? = null
     private var progressBar: ProgressBar? = null
@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
         trackerCount = prefs.getInt("tracker_count", 0)
 
+        // --- BINDING UI ---
         webView = findViewById(R.id.webview)
         addressBar = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
@@ -87,7 +88,6 @@ class MainActivity : AppCompatActivity() {
         setupToolbar()
         setupBackPressHandler()
         
-        // Render the dynamic speed dials
         renderSpeedDials()
     }
 
@@ -99,6 +99,9 @@ class MainActivity : AppCompatActivity() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
 
+    // ==========================================
+    // SPEED DIAL LOGIC
+    // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
@@ -170,36 +173,6 @@ class MainActivity : AppCompatActivity() {
         addLetter.setTextColor(Color.parseColor("#8B8B93"))
         addName.text = "Add"
         
-        addBtnView.setOnClickListener {
-            showAddSpeedDialDialog()
-        }
-
-        val addParams = GridLayout.LayoutParams()
-        addParams.width = 0
-        addParams.height = GridLayout.LayoutParams.WRAP_CONTENT
-        addParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-        addParams.setMargins(8, 8, 8, 8)
-        addBtnView.layoutParams = addParams
-
-        speedDialGrid?.addView(addBtnView)
-    }
-        // Add "+ Add" button
-        val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
-        val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
-        val addName = addBtnView.findViewById<TextView>(R.id.sd_name)
-        
-        addLetter.text = "+"
-        addLetter.setTextColor(Color.parseColor("#8B8B93"))
-        addName.text = "Add"
-        
-        val addBg = GradientDrawable()
-        addBg.shape = GradientDrawable.OVAL
-        addBg.setColor(Color.TRANSPARENT)
-        // FIXED: 8f, 8f for Float
-        addBg.setStroke(3, Color.parseColor("#8B8B93"), 8f, 8f) 
-        
-        (addLetter.parent as FrameLayout).background = addBg
-
         addBtnView.setOnClickListener {
             showAddSpeedDialDialog()
         }
