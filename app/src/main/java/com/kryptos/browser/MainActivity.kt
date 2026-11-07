@@ -2,14 +2,15 @@ package com.kryptos.browser
 
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.Window
 import android.view.inputmethod.EditorInfo
@@ -25,12 +26,9 @@ import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.content.FileProvider
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
-import java.io.File
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : AppCompatActivity() {
 
@@ -42,12 +40,11 @@ class MainActivity : AppCompatActivity() {
     private var bottomDock: LinearLayout? = null
     private var txtTrackerCount: TextView? = null
     private var txtTabCount: TextView? = null
-    
     private var btnEngineSwitch: ImageView? = null
+    private var speedDialGrid: GridLayout? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
-
     private var trackerCount = 0
 
     private val searchEngines = listOf(
@@ -82,16 +79,16 @@ class MainActivity : AppCompatActivity() {
         txtTrackerCount = findViewById(R.id.txt_tracker_count)
         txtTabCount = findViewById(R.id.txt_tab_count)
         btnEngineSwitch = findViewById(R.id.btn_engine_switch)
+        speedDialGrid = findViewById(R.id.speed_dial_grid)
 
         updateTrackerUI()
         updateTabCountUI()
         setupWebView()
         setupToolbar()
         setupBackPressHandler()
-        setupHomepageSpeedDial()
-
-        // Call the updater here
-        checkForUpdates()
+        
+        // Render the dynamic speed dials
+        renderSpeedDials()
     }
 
     private fun updateTrackerUI() {
@@ -101,31 +98,152 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
-    private fun showToast(message: String) {
+
+    // ==========================================
+    // SPEED DIAL LOGIC (NAYA)
+    // ==========================================
+    private fun renderSpeedDials() {
+        speedDialGrid?.removeAllViews()
+        
+        var dials = loadSpeedDials()
+        if (dials.isEmpty()) {
+            // Default items if list is empty
+            dials.add(Pair("GitHub", "https://github.com"))
+            dials.add(Pair("Reddit", "https://reddit.com"))
+            dials.add(Pair("YouTube", "https://youtube.com"))
+            saveSpeedDials(dials)
+        }
+
+        // Colors for dynamic icons
+        val colors = intArrayOf(
+            Color.parseColor("#FF5722"), // Orange
+            Color.parseColor("#2196F3"), // Blue
+            Color.parseColor("#9C27B0"), // Purple
+            Color.parseColor("#E91E63"), // Pink
+            Color.parseColor("#00BCD4")  // Cyan
+        )
+
+        for ((index, dial) in dials.withIndex()) {
+            val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
+            
+            val letterText = itemView.findViewById<TextView>(R.id.sd_letter)
+            val nameText = itemView.findViewById<TextView>(R.id.sd_name)
+
+            // First letter uppercase
+            letterText.text = dial.first.substring(0, 1).uppercase()
+            nameText.text = dial.first
+
+            // Random color for the circle background based on index
+            val color = colors[index % colors.size]
+            val bgDrawable = GradientDrawable()
+            bgDrawable.shape = GradientDrawable.OVAL
+            bgDrawable.setColor(Color.parseColor("#1A" + Integer.toHexString(color).substring(2))) // 10% opacity
+            bgDrawable.setStroke(2, color)
+            // We apply it to the frame layout (parent of sd_letter)
+            (letterText.parent as FrameLayout).background = bgDrawable
+            letterText.setTextColor(color)
+
+            itemView.setOnClickListener {
+                loadUrlOrSearch(dial.second)
+            }
+
+            val params = GridLayout.LayoutParams()
+            params.width = 0
+            params.height = GridLayout.LayoutParams.WRAP_CONTENT
+            params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            params.setMargins(8, 8, 8, 8)
+            itemView.layoutParams = params
+
+            speedDialGrid?.addView(itemView)
+        }
+
+        // Add the "+ Add" button at the end
+        val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
+        val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
+        val addName = addBtnView.findViewById<TextView>(R.id.sd_name)
+        
+        addLetter.text = "+"
+        addLetter.setTextColor(Color.parseColor("#8B8B93"))
+        addName.text = "Add"
+        
+        val addBg = GradientDrawable()
+        addBg.shape = GradientDrawable.OVAL
+        addBg.setColor(Color.TRANSPARENT)
+        addBg.setStroke(3, Color.parseColor("#8B8B93"), 8, 8) // Dashed stroke
+        (addLetter.parent as FrameLayout).background = addBg
+
+        addBtnView.setOnClickListener {
+            showAddSpeedDialDialog()
+        }
+
+        val addParams = GridLayout.LayoutParams()
+        addParams.width = 0
+        addParams.height = GridLayout.LayoutParams.WRAP_CONTENT
+        addParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+        addParams.setMargins(8, 8, 8, 8)
+        addBtnView.layoutParams = addParams
+
+        speedDialGrid?.addView(addBtnView)
+    }
+
+    private fun showAddSpeedDialDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_custom)
+        dialog.setContentView(R.layout.dialog_add_speed_dial)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        
-        val title = dialog.findViewById<TextView>(R.id.dialog_title)
-        val msg = dialog.findViewById<TextView>(R.id.dialog_message)
-        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
-        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
-        
-        title.visibility = View.GONE
-        btnCancel.visibility = View.GONE
-        btnConfirm.text = "OK"
-        msg.text = message
-        
-        btnConfirm.setOnClickListener { dialog.dismiss() }
+
+        val etName = dialog.findViewById<EditText>(R.id.et_sd_name)
+        val etUrl = dialog.findViewById<EditText>(R.id.et_sd_url)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_cancel_sd)
+        val btnSave = dialog.findViewById<TextView>(R.id.btn_save_sd)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnSave.setOnClickListener {
+            val name = etName.text.toString().trim()
+            var url = etUrl.text.toString().trim()
+
+            if (name.isNotEmpty() && url.isNotEmpty()) {
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://$url"
+                }
+
+                val dials = loadSpeedDials()
+                dials.add(Pair(name, url))
+                saveSpeedDials(dials)
+                renderSpeedDials()
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this, "Please enter both Name and URL", Toast.LENGTH_SHORT).show()
+            }
+        }
         dialog.show()
     }
 
-    private fun setupHomepageSpeedDial() {
-        findViewById<LinearLayout>(R.id.btn_add_speed_dial)?.setOnClickListener {
-            Toast.makeText(this, "Add Speed Dial coming soon!", Toast.LENGTH_SHORT).show()
-        }
+    private fun loadSpeedDials(): MutableList<Pair<String, String>> {
+        val list = mutableListOf<Pair<String, String>>()
+        val jsonStr = prefs.getString("speed_dials", "[]")
+        try {
+            val jsonArray = JSONArray(jsonStr)
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                list.add(Pair(obj.getString("name"), obj.getString("url")))
+            }
+        } catch (e: Exception) { }
+        return list
     }
+
+    private fun saveSpeedDials(dials: List<Pair<String, String>>) {
+        val jsonArray = JSONArray()
+        for (dial in dials) {
+            val obj = JSONObject()
+            obj.put("name", dial.first)
+            obj.put("url", dial.second)
+            jsonArray.put(obj)
+        }
+        prefs.edit().putString("speed_dials", jsonArray.toString()).apply()
+    }
+
+    // ==========================================
 
     private fun setupToolbar() {
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
@@ -159,9 +277,6 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener { webView.reload() }
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
-        
-        // Forward button code REMOVED as the button no longer exists in XML
-        
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
 
@@ -253,7 +368,6 @@ class MainActivity : AppCompatActivity() {
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
         
-        // NAYA: Website par dock ka background gayab kar do, sirf icons rakho
         bottomDock?.setBackgroundColor(Color.TRANSPARENT)
         bottomDock?.elevation = 0f
         
@@ -268,7 +382,6 @@ class MainActivity : AppCompatActivity() {
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
         
-        // NAYA: Homepage par wapas se sundar dock laga do
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
         bottomDock?.elevation = 12f
         
@@ -295,7 +408,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateTabCountUI() // Update tab count when coming back from TabsActivity
+        updateTabCountUI()
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
@@ -352,123 +465,5 @@ class MainActivity : AppCompatActivity() {
             if (newProgress < 100) { progressBar?.visibility = View.VISIBLE; progressBar?.progress = newProgress }
             else { progressBar?.visibility = View.GONE }
         }
-    }
-
-    // AUTO-UPDATER DEBUG CODE (Now safely at class level)
-    private fun checkForUpdates() {
-        Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
-        
-        Thread {
-            try {
-                val url = URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
-                val connection = url.openConnection() as HttpsURLConnection
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                connection.setRequestProperty("User-Agent", "KryptosBrowser-Updater") 
-                
-                val responseCode = connection.responseCode
-                if (responseCode != 200) {
-                    runOnUiThread { Toast.makeText(this@MainActivity, "Error: GitHub API returned $responseCode", Toast.LENGTH_LONG).show() }
-                    return@Thread
-                }
-
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(response)
-                
-                val latestVersionTag = json.getString("tag_name") 
-                val latestVersion = latestVersionTag.replace("v", "").replace("-beta", "").trim()
-                
-                val currentVersion = "2.0.0" // Fake version for testing
-
-                runOnUiThread { Toast.makeText(this@MainActivity, "Latest: $latestVersion, Current: $currentVersion", Toast.LENGTH_LONG).show() }
-
-                if (latestVersion > currentVersion) {
-                    val assets = json.getJSONArray("assets")
-                    if (assets.length() > 0) {
-                        var downloadUrl = ""
-                        for (i in 0 until assets.length()) {
-                            val asset = assets.getJSONObject(i)
-                            if (asset.getString("name").endsWith(".apk")) {
-                                downloadUrl = asset.getString("browser_download_url")
-                                break
-                            }
-                        }
-                        
-                        if (downloadUrl.isNotEmpty()) {
-                            runOnUiThread { showUpdateDialog(latestVersion, downloadUrl) }
-                        } else {
-                            runOnUiThread { Toast.makeText(this@MainActivity, "Error: APK asset not found in release!", Toast.LENGTH_LONG).show() }
-                        }
-                    } else {
-                        runOnUiThread { Toast.makeText(this@MainActivity, "Error: No assets in release!", Toast.LENGTH_LONG).show() }
-                    }
-                } else {
-                     runOnUiThread { Toast.makeText(this@MainActivity, "App is already up to date!", Toast.LENGTH_SHORT).show() }
-                }
-            } catch (e: Exception) {
-                runOnUiThread { Toast.makeText(this@MainActivity, "Crash Error: ${e.message}", Toast.LENGTH_LONG).show() }
-            }
-        }.start()
-    }
-
-    private fun showUpdateDialog(version: String, downloadUrl: String) {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_custom)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val title = dialog.findViewById<TextView>(R.id.dialog_title)
-        val message = dialog.findViewById<TextView>(R.id.dialog_message)
-        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
-        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
-
-        title.text = "Update Available"
-        message.text = "A new version ($version) of Kryptos Browser is available. Update now?"
-        btnConfirm.text = "Update"
-        btnConfirm.setTextColor(Color.parseColor("#00E676"))
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            downloadAndInstallApk(downloadUrl)
-        }
-        dialog.show()
-    }
-
-    private fun downloadAndInstallApk(apkUrl: String) {
-        val progressDialog = ProgressDialog(this)
-        progressDialog.setMessage("Downloading update...")
-        progressDialog.setCancelable(false)
-        progressDialog.show()
-
-        Thread {
-            try {
-                val url = URL(apkUrl)
-                val connection = url.openConnection() as HttpsURLConnection
-                connection.connect()
-                val apkFile = File(externalCacheDir, "kryptos_update.apk")
-                connection.inputStream.use { input -> apkFile.outputStream().use { output -> input.copyTo(output) } }
-                runOnUiThread { progressDialog.dismiss(); installApk(apkFile) }
-            } catch (e: Exception) {
-                runOnUiThread { progressDialog.dismiss(); Toast.makeText(this, "Update failed: ${e.message}", Toast.LENGTH_LONG).show() }
-            }
-        }.start()
-    }
-
-    private fun installApk(apkFile: File) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            if (!packageManager.canRequestPackageInstalls()) {
-                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                intent.data = Uri.parse("package:$packageName")
-                startActivity(intent)
-                return
-            }
-        }
-        val apkUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
     }
 }
