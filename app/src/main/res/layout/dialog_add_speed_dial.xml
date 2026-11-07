@@ -14,30 +14,39 @@
         android:textSize="20sp"
         android:textStyle="bold" />
 
+    <!-- Website Name Input -->
     <EditText
         android:id="@+id/et_sd_name"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:layout_marginTop="16dp"
-        android:background="@drawable/bg_address_bar_pill"
+        android:background="@drawable/bg_inner_circle"
         android:hint="Website Name (e.g. Amazon)"
-        android:padding="12dp"
+        android:paddingHorizontal="16dp"
         android:textColor="@color/kryptos_text_primary"
         android:textColorHint="@color/kryptos_text_secondary"
-        android:inputType="text" />
+        android:textSize="14sp"
+        android:inputType="text"
+        android:maxLines="1"
+        android:gravity="center_vertical" />
 
+    <!-- URL Input -->
     <EditText
         android:id="@+id/et_sd_url"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:layout_marginTop="12dp"
-        android:background="@drawable/bg_address_bar_pill"
+        android:background="@drawable/bg_inner_circle"
         android:hint="URL (e.g. amazon.in)"
-        android:padding="12dp"
+        android:paddingHorizontal="16dp"
         android:textColor="@color/kryptos_text_primary"
         android:textColorHint="@color/kryptos_text_secondary"
-        android:inputType="textUri" />
+        android:textSize="14sp"
+        android:inputType="textUri"
+        android:maxLines="1"
+        android:gravity="center_vertical" />
 
+    <!-- Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -52,16 +61,18 @@
             android:padding="8dp"
             android:text="Cancel"
             android:textColor="@color/kryptos_text_secondary"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btn_save_sd"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="24dp"
             android:padding="8dp"
             android:text="Save"
             android:textColor="@color/kryptos_primary"
+            android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>
