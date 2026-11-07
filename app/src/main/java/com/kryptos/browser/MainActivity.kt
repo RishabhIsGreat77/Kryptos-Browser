@@ -100,27 +100,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // SPEED DIAL LOGIC (NAYA)
+    // SPEED DIAL LOGIC
     // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
         var dials = loadSpeedDials()
         if (dials.isEmpty()) {
-            // Default items if list is empty
             dials.add(Pair("GitHub", "https://github.com"))
             dials.add(Pair("Reddit", "https://reddit.com"))
             dials.add(Pair("YouTube", "https://youtube.com"))
             saveSpeedDials(dials)
         }
 
-        // Colors for dynamic icons
         val colors = intArrayOf(
-            Color.parseColor("#FF5722"), // Orange
-            Color.parseColor("#2196F3"), // Blue
-            Color.parseColor("#9C27B0"), // Purple
-            Color.parseColor("#E91E63"), // Pink
-            Color.parseColor("#00BCD4")  // Cyan
+            Color.parseColor("#FF5722"),
+            Color.parseColor("#2196F3"),
+            Color.parseColor("#9C27B0"),
+            Color.parseColor("#E91E63"),
+            Color.parseColor("#00BCD4")
         )
 
         for ((index, dial) in dials.withIndex()) {
@@ -129,17 +127,18 @@ class MainActivity : AppCompatActivity() {
             val letterText = itemView.findViewById<TextView>(R.id.sd_letter)
             val nameText = itemView.findViewById<TextView>(R.id.sd_name)
 
-            // First letter uppercase
             letterText.text = dial.first.substring(0, 1).uppercase()
             nameText.text = dial.first
 
-            // Random color for the circle background based on index
             val color = colors[index % colors.size]
             val bgDrawable = GradientDrawable()
             bgDrawable.shape = GradientDrawable.OVAL
-            bgDrawable.setColor(Color.parseColor("#1A" + Integer.toHexString(color).substring(2))) // 10% opacity
+            
+            // SAFE HEX CONVERSION
+            val hexColor = String.format("#1A%06X", (0xFFFFFF and color))
+            bgDrawable.setColor(Color.parseColor(hexColor))
             bgDrawable.setStroke(2, color)
-            // We apply it to the frame layout (parent of sd_letter)
+            
             (letterText.parent as FrameLayout).background = bgDrawable
             letterText.setTextColor(color)
 
@@ -157,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             speedDialGrid?.addView(itemView)
         }
 
-        // Add the "+ Add" button at the end
+        // Add "+ Add" button
         val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
         val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
         val addName = addBtnView.findViewById<TextView>(R.id.sd_name)
@@ -169,7 +168,9 @@ class MainActivity : AppCompatActivity() {
         val addBg = GradientDrawable()
         addBg.shape = GradientDrawable.OVAL
         addBg.setColor(Color.TRANSPARENT)
-        addBg.setStroke(3, Color.parseColor("#8B8B93"), 8, 8) // Dashed stroke
+        // FIXED: 8f, 8f for Float
+        addBg.setStroke(3, Color.parseColor("#8B8B93"), 8f, 8f) 
+        
         (addLetter.parent as FrameLayout).background = addBg
 
         addBtnView.setOnClickListener {
