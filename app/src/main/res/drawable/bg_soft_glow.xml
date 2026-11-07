@@ -3,7 +3,7 @@
     <!-- Brighter Green Radial Glow -->
     <gradient
         android:type="radial"
-        android:gradientRadius="120dp"
+        android:gradientRadius="180dp"
         android:startColor="#8000E676"
         android:centerColor="#3000E676"
         android:endColor="#00000000" />
