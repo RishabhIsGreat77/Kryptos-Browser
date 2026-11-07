@@ -101,6 +101,25 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
+    private fun showToast(message: String) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val msg = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
+        
+        title.visibility = View.GONE
+        btnCancel.visibility = View.GONE
+        btnConfirm.text = "OK"
+        msg.text = message
+        
+        btnConfirm.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+    }
 
     private fun setupHomepageSpeedDial() {
         findViewById<LinearLayout>(R.id.btn_add_speed_dial)?.setOnClickListener {
