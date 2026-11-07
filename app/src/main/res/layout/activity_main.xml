@@ -36,19 +36,20 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp">
 
-            <EditText
-                android:id="@+id/address_bar"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="kryptos://home"
-                android:textColor="@color/kryptos_text_primary"
-                android:textSize="14sp"
-                android:background="@android:color/transparent"
-                android:imeOptions="actionGo"
-                android:inputType="textUri"
-                android:maxLines="1"
-                android:selectAllOnFocus="true" />
+        <EditText
+            android:id="@+id/address_bar"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="kryptos://home"
+            android:textColor="@color/kryptos_text_primary"
+            android:textSize="16sp" 
+            android:fontFamily="serif" 
+            android:background="@android:color/transparent"
+            android:imeOptions="actionGo"
+            android:inputType="textUri"
+            android:maxLines="1"
+            android:selectAllOnFocus="true" />
 
             <ImageButton
                 android:id="@+id/btn_reload"
