@@ -3,6 +3,7 @@ package com.kryptos.browser
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageButton
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -31,9 +32,19 @@ class TabsActivity : AppCompatActivity() {
         )
         recyclerView.adapter = adapter
 
+        // NAYA: Naya tab open karte hi usme jao
         findViewById<ImageButton>(R.id.btn_new_tab).setOnClickListener {
-            TabManager.addNewTab("kryptos://home", "New Tab")
-            adapter.updateTabs(TabManager.tabsList)
+            val newTab = TabManager.addNewTab("kryptos://home", "New Tab")
+            TabManager.setActiveTab(newTab.id)
+            finish() // Direct wapas MainActivity me jayega
+        }
+
+        // NAYA: Incognito Tab ka logic (Abhi ke liye ek dummy tab banayenge)
+        findViewById<ImageButton>(R.id.btn_new_incognito_tab).setOnClickListener {
+            val incognitoTab = TabManager.addNewTab("kryptos://home", "Incognito Tab")
+            TabManager.setActiveTab(incognitoTab.id)
+            Toast.makeText(this, "Incognito Tab Opened (Features coming in V4)", Toast.LENGTH_SHORT).show()
+            finish()
         }
     }
     
