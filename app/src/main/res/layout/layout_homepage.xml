@@ -8,12 +8,15 @@
     android:paddingHorizontal="24dp"
     android:paddingTop="40dp">
 
-    <!-- Fingerprint Logo WITH REALISTIC GLOW -->
+    <!-- Ambient Light Background Layer with Fingerprint -->
     <FrameLayout
-        android:layout_width="160dp"
-        android:layout_height="160dp"
-        android:background="@drawable/bg_soft_glow">
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="-40dp" 
+        android:background="@drawable/bg_ambient_glow">
 
+        <!-- Fingerprint Logo (UNTOUCHED) -->
         <ImageView
             android:layout_width="100dp"
             android:layout_height="100dp"
@@ -26,7 +29,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="-30dp"
         android:text="KRYPTOS"
         android:textColor="@color/kryptos_text_primary"
         android:textSize="26sp"
@@ -44,7 +47,7 @@
         android:textSize="10sp"
         android:letterSpacing="0.15" />
 
-    <!-- NAYA: Dynamic Speed Dial Grid -->
+    <!-- Dynamic Speed Dial Grid -->
     <GridLayout
         android:id="@+id/speed_dial_grid"
         android:layout_width="match_parent"
