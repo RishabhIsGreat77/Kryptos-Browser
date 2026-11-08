@@ -397,7 +397,7 @@ class MainActivity : AppCompatActivity() {
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
     }
-
+    
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -409,7 +409,8 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    
+        settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
         
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
