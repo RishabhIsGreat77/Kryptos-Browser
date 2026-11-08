@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <!-- Large radius for smooth falloff -->
     <gradient
         android:type="radial"
         android:gradientRadius="280dp"
         android:centerX="0.5"
         android:centerY="0.5"
-        android:startColor="#1800E676"  <!-- Very dim green at center (approx 9%) -->
-        android:centerColor="#0A00E676" <!-- Even dimmer at mid (approx 4%) -->
-        android:endColor="#00000000" /> <!-- Completely transparent at edges -->
+        android:startColor="#1800E676"
+        android:centerColor="#0A00E676"
+        android:endColor="#00000000" />
 </shape>
