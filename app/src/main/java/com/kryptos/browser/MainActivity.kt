@@ -2,18 +2,22 @@ package com.kryptos.browser
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.Window
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -41,13 +45,15 @@ class MainActivity : AppCompatActivity() {
     private var txtTabCount: TextView? = null
     private var btnEngineSwitch: ImageView? = null
     private var speedDialGrid: GridLayout? = null
+    private var btnBookmark: ImageView? = null
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
     private var trackerCount = 0
     
-    // NAYA: Database Helper
+    // Databases
     private lateinit var dbHelper: HistoryDatabaseHelper
+    private lateinit var bookmarkDb: BookmarkDatabaseHelper
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -71,6 +77,7 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize DB
         dbHelper = HistoryDatabaseHelper(this)
+        bookmarkDb = BookmarkDatabaseHelper(this)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
         trackerCount = prefs.getInt("tracker_count", 0)
@@ -85,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         txtTabCount = findViewById(R.id.txt_tab_count)
         btnEngineSwitch = findViewById(R.id.btn_engine_switch)
         speedDialGrid = findViewById(R.id.speed_dial_grid)
+        btnBookmark = findViewById(R.id.btn_bookmark)
 
         updateTrackerUI()
         updateTabCountUI()
@@ -277,6 +285,26 @@ class MainActivity : AppCompatActivity() {
             popup.show()
         }
 
+        // Bookmark Star Logic
+        btnBookmark?.setOnClickListener {
+            val currentUrl = webView.url
+            val currentTitle = webView.title ?: "Untitled"
+            
+            if (currentUrl != null && currentUrl != "about:blank" && !currentUrl.startsWith("kryptos://")) {
+                if (bookmarkDb.isBookmarked(currentUrl)) {
+                    bookmarkDb.removeBookmark(currentUrl)
+                    btnBookmark?.setImageResource(R.drawable.ic_star_empty)
+                    Toast.makeText(this, "Bookmark Removed", Toast.LENGTH_SHORT).show()
+                } else {
+                    bookmarkDb.addBookmark(currentTitle, currentUrl)
+                    btnBookmark?.setImageResource(R.drawable.ic_star_filled)
+                    Toast.makeText(this, "Bookmark Added", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Cannot bookmark this page", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener { webView.reload() }
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
@@ -293,6 +321,7 @@ class MainActivity : AppCompatActivity() {
             
             popup.menu.add(0, 1, 1, "Incognito Mode")
             popup.menu.add(0, 2, 2, "History")
+            popup.menu.add(0, 5, 5, "Bookmarks") // NAYA
             popup.menu.add(0, 3, 3, themeText)
             popup.menu.add(0, 4, 4, "Settings")
 
@@ -300,9 +329,12 @@ class MainActivity : AppCompatActivity() {
                 when (item.itemId) {
                     1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
                     2 -> { 
-                        // NAYA: History Screen Open karo
                         startActivity(Intent(this, HistoryActivity::class.java))
                         true 
+                    }
+                    5 -> {
+                        startActivity(Intent(this, BookmarksActivity::class.java))
+                        true
                     }
                     3 -> {
                         val newMode = !isDark
@@ -350,7 +382,7 @@ class MainActivity : AppCompatActivity() {
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
             
-            // NAYA: Database ki history bhi clear karo
+            // Clear History Database
             dbHelper.clearHistory()
             
             TabManager.tabsList.clear()
@@ -396,8 +428,9 @@ class MainActivity : AppCompatActivity() {
         
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
+        btnBookmark?.setImageResource(R.drawable.ic_star_empty)
     }
-    
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -409,11 +442,25 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-    
+        
+        // Updated Mobile Chrome User-Agent (Google CAPTCHA Fix)
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
         
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
+
+        // NAYA: Download Listener
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            val request = DownloadManager.Request(Uri.parse(url))
+            request.setMimeType(mimeType)
+            request.addRequestHeader("User-Agent", userAgent)
+            request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType))
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
+            Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onResume() {
@@ -462,9 +509,14 @@ class MainActivity : AppCompatActivity() {
             if (url != "about:blank" && url != null) {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
+                dbHelper.addHistory(title, url) // History save
                 
-                // NAYA: History me save karo
-                dbHelper.addHistory(title, url)
+                // Update star icon based on bookmark status
+                if (bookmarkDb.isBookmarked(url)) {
+                    btnBookmark?.setImageResource(R.drawable.ic_star_filled)
+                } else {
+                    btnBookmark?.setImageResource(R.drawable.ic_star_empty)
+                }
             }
         }
         
