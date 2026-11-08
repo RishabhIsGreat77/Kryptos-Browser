@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
+    <!-- Purane Android versions ke liye Download Permission -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
         android:allowBackup="false"
@@ -15,10 +18,10 @@
         android:theme="@style/Theme.KryptosBrowser"
         android:usesCleartextTraffic="false">
 
+        <!-- Splash Screen (Launcher) -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
-            android:name=".BookmarksActivity"
             android:theme="@style/Theme.KryptosBrowser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,18 +29,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Main Screen -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:launchMode="singleTask" />
 
-        <!-- NAYA: SettingsActivity को रजिस्टर किया (क्रैश खत्म) -->
+        <!-- NAYE SCREENS -->
         <activity android:name=".SettingsActivity" />
-
         <activity android:name=".TabsActivity" />
         <activity android:name=".HistoryActivity" />
+        <activity android:name=".BookmarksActivity" />
 
+        <!-- FileProvider for Auto-Updater -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
