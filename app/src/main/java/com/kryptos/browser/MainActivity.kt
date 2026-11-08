@@ -31,7 +31,6 @@ import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
 
-    // --- VARIABLES DECLARATION ---
     private lateinit var webView: WebView
     private var addressBar: EditText? = null
     private var progressBar: ProgressBar? = null
@@ -46,6 +45,9 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
     private var trackerCount = 0
+    
+    // NAYA: Database Helper
+    private lateinit var dbHelper: HistoryDatabaseHelper
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -67,10 +69,12 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         setContentView(R.layout.activity_main)
 
+        // Initialize DB
+        dbHelper = HistoryDatabaseHelper(this)
+
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
         trackerCount = prefs.getInt("tracker_count", 0)
 
-        // --- BINDING UI ---
         webView = findViewById(R.id.webview)
         addressBar = findViewById(R.id.address_bar)
         progressBar = findViewById(R.id.progress_bar)
@@ -122,7 +126,6 @@ class MainActivity : AppCompatActivity() {
 
             nameText.text = dial.first
 
-            // Check if it's a default site to show its real icon
             when (dial.first.lowercase()) {
                 "github" -> {
                     iconImg.setImageResource(R.drawable.ic_github)
@@ -140,7 +143,6 @@ class MainActivity : AppCompatActivity() {
                     letterText.visibility = View.GONE
                 }
                 else -> {
-                    // For custom sites, show the first letter (Monochrome style)
                     iconImg.visibility = View.GONE
                     letterText.visibility = View.VISIBLE
                     letterText.text = dial.first.substring(0, 1).uppercase()
@@ -161,7 +163,6 @@ class MainActivity : AppCompatActivity() {
             speedDialGrid?.addView(itemView)
         }
 
-        // Add "+ Add" button at the end
         val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
         val addIcon = addBtnView.findViewById<ImageView>(R.id.sd_icon)
         val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
@@ -298,7 +299,11 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
-                    2 -> { Toast.makeText(this, "History coming soon!", Toast.LENGTH_SHORT).show(); true }
+                    2 -> { 
+                        // NAYA: History Screen Open karo
+                        startActivity(Intent(this, HistoryActivity::class.java))
+                        true 
+                    }
                     3 -> {
                         val newMode = !isDark
                         prefs.edit().putBoolean("dark_mode", newMode).apply()
@@ -344,6 +349,9 @@ class MainActivity : AppCompatActivity() {
             webView.clearHistory()
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
+            
+            // NAYA: Database ki history bhi clear karo
+            dbHelper.clearHistory()
             
             TabManager.tabsList.clear()
             TabManager.addNewTab("kryptos://home", "Home")
@@ -445,11 +453,20 @@ class MainActivity : AppCompatActivity() {
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
+        
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar?.visibility = View.GONE
-            if (url != "about:blank" && url != null) TabManager.updateActiveTabTitle(view?.title ?: "New Tab", url)
+            
+            if (url != "about:blank" && url != null) {
+                val title = view?.title ?: "New Tab"
+                TabManager.updateActiveTabTitle(title, url)
+                
+                // NAYA: History me save karo
+                dbHelper.addHistory(title, url)
+            }
         }
+        
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
