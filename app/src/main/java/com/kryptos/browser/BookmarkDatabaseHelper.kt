@@ -54,12 +54,9 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
         return historyList
     }
 
-    // NAYA: Sirf valid websites ko nikalna, search queries ko ignore karna
     fun getMostVisitedSites(limit: Int): List<HistoryItem> {
         val list = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
-        
-        // SQL Query se un URLs ko hata diya jo search queries lagte hain
         val cursor = db.rawQuery(
             "SELECT * FROM history WHERE " +
             "url NOT LIKE '%?q=%' AND " +
@@ -90,4 +87,5 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
     }
 }
 
+// Data Class (Sirf ek baar defined hai)
 data class HistoryItem(val title: String, val url: String, val timestamp: Long)
