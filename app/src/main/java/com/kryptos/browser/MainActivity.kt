@@ -6,6 +6,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import java.io.File
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -96,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         setupBackPressHandler()
         
         renderSpeedDials()
+        checkAndClearCache()
     }
 
     private fun updateTrackerUI() {
@@ -382,6 +384,35 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(activeTab.url)
             }
         }
+    }
+
+        // NAYA: Auto Cache Cleaner Logic
+    private fun checkAndClearCache() {
+        Thread {
+            try {
+                val cacheSize = getDirSize(cacheDir)
+                val sizeInMB = cacheSize / (1024 * 1024)
+                
+                // Agar cache 100MB se zyada hai toh clear karo
+                if (sizeInMB > 100) {
+                    runOnUiThread {
+                        webView.clearCache(true)
+                        WebStorage.getInstance().deleteAllData()
+                        Toast.makeText(this, "Cache auto-cleared to save space!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) { }
+        }.start()
+    }
+
+    private fun getDirSize(dir: File): Long {
+        var size: Long = 0
+        try {
+            for (file in dir.listFiles()!!) {
+                size += if (file.isFile) file.length() else getDirSize(file)
+            }
+        } catch (e: Exception) { }
+        return size
     }
 
     override fun onDestroy() {
