@@ -16,7 +16,9 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.KryptosBrowser"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false"
+        android:icon="@drawable/app_icon"
+        android:roundIcon="@drawable/app_icon">
 
         <!-- Splash Screen (Launcher) -->
         <activity
