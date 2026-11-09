@@ -22,7 +22,7 @@
             android:layout_height="100dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_fingerprint"
-            android:tint="@color/kryptos_primary" />
+            android:tint="#00FF41" />
     </FrameLayout>
 
     <!-- KRYPTOS Wordmark -->
