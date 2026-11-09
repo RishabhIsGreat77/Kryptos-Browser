@@ -5,69 +5,46 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 2) {
+class BookmarkDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosBookmarks.db", null, 1) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER, visit_count INTEGER)"
-        db.execSQL(createTable)
+        db.execSQL("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS history")
+        db.execSQL("DROP TABLE IF EXISTS bookmarks")
         onCreate(db)
     }
 
-    fun addHistory(title: String, url: String) {
+    fun addBookmark(title: String, url: String) {
         val db = this.writableDatabase
-        val cursor = db.rawQuery("SELECT visit_count FROM history WHERE url=?", arrayOf(url))
-        var count = 1
-        if (cursor.moveToFirst()) {
-            count = cursor.getInt(0) + 1
-        }
-        cursor.close()
-
         val values = ContentValues().apply {
             put("title", title)
             put("url", url)
-            put("timestamp", System.currentTimeMillis())
-            put("visit_count", count)
         }
-        db.insertWithOnConflict("history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        db.insertWithOnConflict("bookmarks", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         db.close()
     }
 
-    fun getAllHistory(): List<HistoryItem> {
-        val historyList = mutableListOf<HistoryItem>()
-        val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM history ORDER BY timestamp DESC", null)
+    fun removeBookmark(url: String) {
+        val db = this.writableDatabase
+        db.delete("bookmarks", "url=?", arrayOf(url))
+        db.close()
+    }
 
-        if (cursor.moveToFirst()) {
-            do {
-                val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
-                val url = cursor.getString(cursor.getColumnIndexOrThrow("url"))
-                val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow("timestamp"))
-                historyList.add(HistoryItem(title, url, timestamp))
-            } while (cursor.moveToNext())
-        }
+    fun isBookmarked(url: String): Boolean {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM bookmarks WHERE url=?", arrayOf(url))
+        val exists = cursor.count > 0
         cursor.close()
         db.close()
-        return historyList
+        return exists
     }
 
-    fun getMostVisitedSites(limit: Int): List<HistoryItem> {
+    fun getAllBookmarks(): List<HistoryItem> {
         val list = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
-        val cursor = db.rawQuery(
-            "SELECT * FROM history WHERE " +
-            "url NOT LIKE '%?q=%' AND " +
-            "url NOT LIKE '%&q=%' AND " +
-            "url NOT LIKE '%/search%' AND " +
-            "url NOT LIKE '%?p=%' AND " +
-            "url NOT LIKE 'kryptos://%' " +
-            "ORDER BY visit_count DESC LIMIT $limit", 
-            null
-        )
-
+        val cursor = db.rawQuery("SELECT * FROM bookmarks ORDER BY id DESC", null)
         if (cursor.moveToFirst()) {
             do {
                 val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
@@ -80,12 +57,9 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
         return list
     }
 
-    fun clearHistory() {
+    fun clearBookmarks() {
         val db = this.writableDatabase
-        db.execSQL("DELETE FROM history")
+        db.execSQL("DELETE FROM bookmarks")
         db.close()
     }
 }
-
-// Data Class (Sirf ek baar defined hai)
-data class HistoryItem(val title: String, val url: String, val timestamp: Long)
