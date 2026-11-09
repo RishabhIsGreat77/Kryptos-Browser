@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -29,8 +28,6 @@ import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
@@ -51,7 +48,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: android.content.SharedPreferences
     private var trackerCount = 0
     
-    // Databases
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
 
@@ -75,7 +71,6 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         setContentView(R.layout.activity_main)
 
-        // Initialize DB
         dbHelper = HistoryDatabaseHelper(this)
         bookmarkDb = BookmarkDatabaseHelper(this)
 
@@ -112,17 +107,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // SPEED DIAL LOGIC
+    // AUTO SPEED DIAL LOGIC (NEW)
     // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
-        var dials = loadSpeedDials()
+        // Database se top 4 sites uthao
+        var dials = dbHelper.getMostVisitedSites(4)
+        
+        // Agar user naya hai (history khali hai), toh Default sites dikhao
         if (dials.isEmpty()) {
-            dials.add(Pair("GitHub", "https://github.com"))
-            dials.add(Pair("Reddit", "https://reddit.com"))
-            dials.add(Pair("YouTube", "https://youtube.com"))
-            saveSpeedDials(dials)
+            dials = listOf(
+                HistoryItem("GitHub", "https://github.com", 0L),
+                HistoryItem("Reddit", "https://reddit.com", 0L),
+                HistoryItem("YouTube", "https://youtube.com", 0L)
+            )
         }
 
         for ((index, dial) in dials.withIndex()) {
@@ -132,33 +131,22 @@ class MainActivity : AppCompatActivity() {
             val letterText = itemView.findViewById<TextView>(R.id.sd_letter)
             val nameText = itemView.findViewById<TextView>(R.id.sd_name)
 
-            nameText.text = dial.first
+            nameText.text = dial.title
 
-            when (dial.first.lowercase()) {
-                "github" -> {
-                    iconImg.setImageResource(R.drawable.ic_github)
-                    iconImg.visibility = View.VISIBLE
-                    letterText.visibility = View.GONE
-                }
-                "reddit" -> {
-                    iconImg.setImageResource(R.drawable.ic_reddit)
-                    iconImg.visibility = View.VISIBLE
-                    letterText.visibility = View.GONE
-                }
-                "youtube" -> {
-                    iconImg.setImageResource(R.drawable.ic_youtube)
-                    iconImg.visibility = View.VISIBLE
-                    letterText.visibility = View.GONE
-                }
+            // Icon Logic (Default sites ka logo, nayi sites ka First Letter)
+            when (dial.title.lowercase()) {
+                "github" -> { iconImg.setImageResource(R.drawable.ic_github); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
+                "reddit" -> { iconImg.setImageResource(R.drawable.ic_reddit); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
+                "youtube" -> { iconImg.setImageResource(R.drawable.ic_youtube); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
                 else -> {
                     iconImg.visibility = View.GONE
                     letterText.visibility = View.VISIBLE
-                    letterText.text = dial.first.substring(0, 1).uppercase()
+                    letterText.text = if(dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
                 }
             }
 
             itemView.setOnClickListener {
-                loadUrlOrSearch(dial.second)
+                loadUrlOrSearch(dial.url)
             }
 
             val params = GridLayout.LayoutParams()
@@ -170,90 +158,12 @@ class MainActivity : AppCompatActivity() {
 
             speedDialGrid?.addView(itemView)
         }
-
-        val addBtnView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
-        val addIcon = addBtnView.findViewById<ImageView>(R.id.sd_icon)
-        val addLetter = addBtnView.findViewById<TextView>(R.id.sd_letter)
-        val addName = addBtnView.findViewById<TextView>(R.id.sd_name)
-        
-        addIcon.visibility = View.GONE
-        addLetter.visibility = View.VISIBLE
-        addLetter.text = "+"
-        addLetter.setTextColor(Color.parseColor("#8B8B93"))
-        addName.text = "Add"
-        
-        addBtnView.setOnClickListener {
-            showAddSpeedDialDialog()
-        }
-
-        val addParams = GridLayout.LayoutParams()
-        addParams.width = 0
-        addParams.height = GridLayout.LayoutParams.WRAP_CONTENT
-        addParams.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-        addParams.setMargins(8, 8, 8, 8)
-        addBtnView.layoutParams = addParams
-
-        speedDialGrid?.addView(addBtnView)
+        // Note: "+ Add" button ka code yahan se hata diya gaya hai
     }
 
-    private fun showAddSpeedDialDialog() {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_add_speed_dial)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    // ==========================================
 
-        val etName = dialog.findViewById<EditText>(R.id.et_sd_name)
-        val etUrl = dialog.findViewById<EditText>(R.id.et_sd_url)
-        val btnCancel = dialog.findViewById<TextView>(R.id.btn_cancel_sd)
-        val btnSave = dialog.findViewById<TextView>(R.id.btn_save_sd)
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-        btnSave.setOnClickListener {
-            val name = etName.text.toString().trim()
-            var url = etUrl.text.toString().trim()
-
-            if (name.isNotEmpty() && url.isNotEmpty()) {
-                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    url = "https://$url"
-                }
-
-                val dials = loadSpeedDials()
-                dials.add(Pair(name, url))
-                saveSpeedDials(dials)
-                renderSpeedDials()
-                dialog.dismiss()
-            } else {
-                Toast.makeText(this, "Please enter both Name and URL", Toast.LENGTH_SHORT).show()
-            }
-        }
-        dialog.show()
-    }
-
-    private fun loadSpeedDials(): MutableList<Pair<String, String>> {
-        val list = mutableListOf<Pair<String, String>>()
-        val jsonStr = prefs.getString("speed_dials", "[]")
-        try {
-            val jsonArray = JSONArray(jsonStr)
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                list.add(Pair(obj.getString("name"), obj.getString("url")))
-            }
-        } catch (e: Exception) { }
-        return list
-    }
-
-    private fun saveSpeedDials(dials: List<Pair<String, String>>) {
-        val jsonArray = JSONArray()
-        for (dial in dials) {
-            val obj = JSONObject()
-            obj.put("name", dial.first)
-            obj.put("url", dial.second)
-            jsonArray.put(obj)
-        }
-        prefs.edit().putString("speed_dials", jsonArray.toString()).apply()
-    }
     private fun setupToolbar() {
-        // NAYA FIX: Click aur Focus dono par text clear ho
         val clearAddressBar = View.OnClickListener {
             if (addressBar?.text.toString() == "kryptos://home") {
                 addressBar?.setText("")
@@ -291,7 +201,6 @@ class MainActivity : AppCompatActivity() {
             popup.show()
         }
 
-        // Bookmark Star Logic
         btnBookmark?.setOnClickListener {
             val currentUrl = webView.url
             val currentTitle = webView.title ?: "Untitled"
@@ -334,79 +243,8 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
-                    2 -> { 
-                        startActivity(Intent(this, HistoryActivity::class.java))
-                        true 
-                    }
-                    5 -> {
-                        startActivity(Intent(this, BookmarksActivity::class.java))
-                        true
-                    }
-                    3 -> {
-                        val newMode = !isDark
-                        prefs.edit().putBoolean("dark_mode", newMode).apply()
-                        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-                        recreate(); true
-                    }
-                    4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
-                    else -> false
-                }
-            }
-            popup.show()
-        }
-    }
-
-        // Bookmark Star Logic
-        btnBookmark?.setOnClickListener {
-            val currentUrl = webView.url
-            val currentTitle = webView.title ?: "Untitled"
-            
-            if (currentUrl != null && currentUrl != "about:blank" && !currentUrl.startsWith("kryptos://")) {
-                if (bookmarkDb.isBookmarked(currentUrl)) {
-                    bookmarkDb.removeBookmark(currentUrl)
-                    btnBookmark?.setImageResource(R.drawable.ic_star_empty)
-                    Toast.makeText(this, "Bookmark Removed", Toast.LENGTH_SHORT).show()
-                } else {
-                    bookmarkDb.addBookmark(currentTitle, currentUrl)
-                    btnBookmark?.setImageResource(R.drawable.ic_star_filled)
-                    Toast.makeText(this, "Bookmark Added", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "Cannot bookmark this page", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        findViewById<ImageButton>(R.id.btn_reload)?.setOnClickListener { webView.reload() }
-        findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
-        findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
-        findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
-
-        findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
-            startActivity(Intent(this, TabsActivity::class.java))
-        }
-
-        findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
-            val popup = PopupMenu(this, view)
-            val isDark = prefs.getBoolean("dark_mode", true)
-            val themeText = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
-            
-            popup.menu.add(0, 1, 1, "Incognito Mode")
-            popup.menu.add(0, 2, 2, "History")
-            popup.menu.add(0, 5, 5, "Bookmarks") // NAYA
-            popup.menu.add(0, 3, 3, themeText)
-            popup.menu.add(0, 4, 4, "Settings")
-
-            popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
-                    2 -> { 
-                        startActivity(Intent(this, HistoryActivity::class.java))
-                        true 
-                    }
-                    5 -> {
-                        startActivity(Intent(this, BookmarksActivity::class.java))
-                        true
-                    }
+                    2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
+                    5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
                     3 -> {
                         val newMode = !isDark
                         prefs.edit().putBoolean("dark_mode", newMode).apply()
@@ -453,8 +291,7 @@ class MainActivity : AppCompatActivity() {
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
             
-            // Clear History Database
-            dbHelper.clearHistory()
+            dbHelper.clearHistory() // Auto speed dial bhi clear ho jayega
             
             TabManager.tabsList.clear()
             TabManager.addNewTab("kryptos://home", "Home")
@@ -514,13 +351,11 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         
-        // Updated Mobile Chrome User-Agent (Google CAPTCHA Fix)
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
         
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
 
-        // NAYA: Download Listener
         webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
@@ -537,6 +372,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateTabCountUI()
+        renderSpeedDials() // Resume par speed dial update hoga
+        
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
@@ -580,9 +417,8 @@ class MainActivity : AppCompatActivity() {
             if (url != "about:blank" && url != null) {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
-                dbHelper.addHistory(title, url) // History save
+                dbHelper.addHistory(title, url) // History aur Visit Count update hoga
                 
-                // Update star icon based on bookmark status
                 if (bookmarkDb.isBookmarked(url)) {
                     btnBookmark?.setImageResource(R.drawable.ic_star_filled)
                 } else {
