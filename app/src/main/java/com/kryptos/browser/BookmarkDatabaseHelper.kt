@@ -5,46 +5,72 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class BookmarkDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosBookmarks.db", null, 1) {
+class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE)")
+        val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER, visit_count INTEGER)"
+        db.execSQL(createTable)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS bookmarks")
+        db.execSQL("DROP TABLE IF EXISTS history")
         onCreate(db)
     }
 
-    fun addBookmark(title: String, url: String) {
+    fun addHistory(title: String, url: String) {
         val db = this.writableDatabase
+        val cursor = db.rawQuery("SELECT visit_count FROM history WHERE url=?", arrayOf(url))
+        var count = 1
+        if (cursor.moveToFirst()) {
+            count = cursor.getInt(0) + 1
+        }
+        cursor.close()
+
         val values = ContentValues().apply {
             put("title", title)
             put("url", url)
+            put("timestamp", System.currentTimeMillis())
+            put("visit_count", count)
         }
-        db.insertWithOnConflict("bookmarks", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        db.insertWithOnConflict("history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         db.close()
     }
 
-    fun removeBookmark(url: String) {
-        val db = this.writableDatabase
-        db.delete("bookmarks", "url=?", arrayOf(url))
-        db.close()
-    }
-
-    fun isBookmarked(url: String): Boolean {
+    fun getAllHistory(): List<HistoryItem> {
+        val historyList = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM bookmarks WHERE url=?", arrayOf(url))
-        val exists = cursor.count > 0
+        val cursor = db.rawQuery("SELECT * FROM history ORDER BY timestamp DESC", null)
+
+        if (cursor.moveToFirst()) {
+            do {
+                val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
+                val url = cursor.getString(cursor.getColumnIndexOrThrow("url"))
+                val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow("timestamp"))
+                historyList.add(HistoryItem(title, url, timestamp))
+            } while (cursor.moveToNext())
+        }
         cursor.close()
         db.close()
-        return exists
+        return historyList
     }
 
-    fun getAllBookmarks(): List<HistoryItem> {
+    // NAYA: Sirf valid websites ko nikalna, search queries ko ignore karna
+    fun getMostVisitedSites(limit: Int): List<HistoryItem> {
         val list = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM bookmarks ORDER BY id DESC", null)
+        
+        // SQL Query se un URLs ko hata diya jo search queries lagte hain
+        val cursor = db.rawQuery(
+            "SELECT * FROM history WHERE " +
+            "url NOT LIKE '%?q=%' AND " +
+            "url NOT LIKE '%&q=%' AND " +
+            "url NOT LIKE '%/search%' AND " +
+            "url NOT LIKE '%?p=%' AND " +
+            "url NOT LIKE 'kryptos://%' " +
+            "ORDER BY visit_count DESC LIMIT $limit", 
+            null
+        )
+
         if (cursor.moveToFirst()) {
             do {
                 val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
@@ -57,10 +83,11 @@ class BookmarkDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Kryp
         return list
     }
 
-    // NAYA: Sare bookmarks delete karne ke liye
-    fun clearBookmarks() {
+    fun clearHistory() {
         val db = this.writableDatabase
-        db.execSQL("DELETE FROM bookmarks")
+        db.execSQL("DELETE FROM history")
         db.close()
     }
 }
+
+data class HistoryItem(val title: String, val url: String, val timestamp: Long)
