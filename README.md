@@ -1,8 +1,8 @@
-Welcome to the Kryptos Browser v3.1.0!
+Welcome to the Kryptos Browser v3.2.0!
 
 This is the biggest update yet, featuring a complete UI overhaul, advanced privacy features, and a massive performance boost.
 
-What's New in V3.1.0:
+What's New in V3.2.0:
 - New Hacker/Sci-Fi UI: Deep matte black theme with vibrant neon green accents and an ambient glowing fingerprint logo.
 - Real-Time Tracker Blocker: Live counter showing how many trackers and ads were blocked.
 - Auto Speed Dial: Your most visited websites now automatically appear on the homepage.
