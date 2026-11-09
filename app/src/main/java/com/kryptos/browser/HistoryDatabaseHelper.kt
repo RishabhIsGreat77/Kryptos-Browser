@@ -5,33 +5,42 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 1) {
+// Version 1 se 2 kar diya hai taaki naya column add ho sake
+class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Table banate hain jisme Title, URL aur Time save hoga
-        val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER)"
+        // NAYA: visit_count column add kiya gaya hai
+        val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER, visit_count INTEGER)"
         db.execSQL(createTable)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // Purana table delete karke naya banayenge
         db.execSQL("DROP TABLE IF EXISTS history")
         onCreate(db)
     }
 
-    // Naya page khulne par history me save karna
     fun addHistory(title: String, url: String) {
-        // Agar wahi URL dobara khule, to use update kar do (Duplicate na bane)
         val db = this.writableDatabase
+        
+        // Check karo pehle se kitni baar khula hai
+        val cursor = db.rawQuery("SELECT visit_count FROM history WHERE url=?", arrayOf(url))
+        var count = 1
+        if (cursor.moveToFirst()) {
+            count = cursor.getInt(0) + 1
+        }
+        cursor.close()
+
         val values = ContentValues().apply {
             put("title", title)
             put("url", url)
             put("timestamp", System.currentTimeMillis())
+            put("visit_count", count) // Counter update
         }
         db.insertWithOnConflict("history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         db.close()
     }
 
-    // Puri history nikalna (Latest sabse upar)
     fun getAllHistory(): List<HistoryItem> {
         val historyList = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
@@ -50,7 +59,25 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
         return historyList
     }
 
-    // Puri history delete karna
+    // NAYA: Top 4 sabse zyada visit ki gayi sites nikalna
+    fun getMostVisitedSites(limit: Int): List<HistoryItem> {
+        val list = mutableListOf<HistoryItem>()
+        val db = this.readableDatabase
+        // Order by visit_count descending
+        val cursor = db.rawQuery("SELECT * FROM history ORDER BY visit_count DESC LIMIT $limit", null)
+
+        if (cursor.moveToFirst()) {
+            do {
+                val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
+                val url = cursor.getString(cursor.getColumnIndexOrThrow("url"))
+                list.add(HistoryItem(title, url, 0L))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
+        db.close()
+        return list
+    }
+
     fun clearHistory() {
         val db = this.writableDatabase
         db.execSQL("DELETE FROM history")
@@ -58,5 +85,4 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
     }
 }
 
-// Data Class (Har history item ke liye)
 data class HistoryItem(val title: String, val url: String, val timestamp: Long)
