@@ -22,7 +22,7 @@
             android:layout_height="100dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_fingerprint"
-            android:tint="#00FF41" />
+            android:tint="@color/kryptos_primary" />
     </FrameLayout>
 
     <!-- KRYPTOS Wordmark -->
@@ -62,7 +62,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="24dp"
         android:background="@drawable/bg_card"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -104,5 +104,50 @@
                 android:src="@drawable/ic_shield"
                 android:tint="@color/kryptos_text_secondary" />
         </FrameLayout>
+    </LinearLayout>
+
+    <!-- PRIVACY SHIELD CARD -->
+    <LinearLayout
+        android:id="@+id/card_privacy_shield"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_card"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_shield"
+            android:tint="@color/kryptos_text_primary" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Privacy Shield"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Tap to clear browsing data"
+                android:textColor="@color/kryptos_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>
