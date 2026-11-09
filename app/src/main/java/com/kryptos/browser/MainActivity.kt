@@ -267,9 +267,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
         
-        // NAYA: Privacy Shield Card Click
-        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener { showClearDataDialog() }
-
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
