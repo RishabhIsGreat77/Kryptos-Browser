@@ -56,4 +56,11 @@ class BookmarkDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Kryp
         db.close()
         return list
     }
+
+    // NAYA: Sare bookmarks delete karne ke liye
+    fun clearBookmarks() {
+        val db = this.writableDatabase
+        db.execSQL("DELETE FROM bookmarks")
+        db.close()
+    }
 }
