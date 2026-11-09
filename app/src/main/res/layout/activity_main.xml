@@ -36,20 +36,22 @@
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp">
 
-        <EditText
-            android:id="@+id/address_bar"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="kryptos://home"
-            android:textColor="@color/kryptos_text_primary"
-            android:textSize="16sp" 
-            android:fontFamily="serif" 
-            android:background="@android:color/transparent"
-            android:imeOptions="actionGo"
-            android:inputType="textUri"
-            android:maxLines="1"
-            android:selectAllOnFocus="true" />
+            <EditText
+                android:id="@+id/address_bar"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="kryptos://home"
+                android:textColor="@color/kryptos_text_primary"
+                android:textSize="16sp" 
+                android:fontFamily="serif" 
+                android:background="@android:color/transparent"
+                android:imeOptions="actionGo"
+                android:inputType="textUri"
+                android:maxLines="1"
+                android:selectAllOnFocus="true" />
+
+            <!-- NAYA: Bookmark Star Icon -->
             <ImageView
                 android:id="@+id/btn_bookmark"
                 android:layout_width="24dp"
@@ -81,7 +83,7 @@
         app:layout_constraintTop_toBottomOf="@id/top_bar"
         android:layout_marginTop="8dp"/>
 
-    <!-- MAIN CONTENT (WebView goes all the way to the bottom) -->
+    <!-- MAIN CONTENT -->
     <FrameLayout
         android:id="@+id/content_frame"
         android:layout_width="match_parent"
@@ -111,12 +113,12 @@
         </FrameLayout>
     </FrameLayout>
 
-    <!-- FLOATING BOTTOM DOCK (5 Buttons) -->
+    <!-- FLOATING BOTTOM DOCK (Fixed overlay issue) -->
     <LinearLayout
         android:id="@+id/bottom_dock"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_marginBottom="12dp"
+        android:layout_height="64dp"
+        android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="16dp"
         android:background="@drawable/bg_bottom_dock"
         android:elevation="12dp"
@@ -133,18 +135,17 @@
         
         <!-- CENTER FIRE BUTTON (Glowing) -->
         <FrameLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:layout_gravity="center_vertical">
             <ImageButton 
                 android:id="@+id/btn_fire" 
                 android:layout_width="match_parent" 
                 android:layout_height="match_parent" 
-                android:layout_margin="6dp"
+                android:layout_margin="4dp"
                 android:src="@drawable/ic_fire" 
                 android:background="@drawable/bg_fire_glow" 
-                android:tint="@color/kryptos_primary" 
-                android:contentDescription="Clear Data" />
+                android:tint="@color/kryptos_primary" />
         </FrameLayout>
 
         <!-- Tabs (Square Box with Number) -->
