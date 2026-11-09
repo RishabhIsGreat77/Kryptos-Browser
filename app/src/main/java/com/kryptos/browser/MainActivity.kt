@@ -108,21 +108,29 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
-
+    
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
-        var dials = dbHelper.getMostVisitedSites(4)
+        val finalDials = mutableListOf<HistoryItem>()
         
-        if (dials.isEmpty()) {
-            dials = listOf(
-                HistoryItem("GitHub", "https://github.com", 0L),
-                HistoryItem("Reddit", "https://reddit.com", 0L),
-                HistoryItem("YouTube", "https://youtube.com", 0L)
-            )
-        }
+        // 1. Permanent Default Dials (Ye hamesha rahenge)
+        finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
+        finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
+        finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        for ((index, dial) in dials.withIndex()) {
+        // 2. Dynamic Dials (Database se, par default wale hata kar)
+        val dynamicDials = dbHelper.getMostVisitedSites(10).filter { 
+            val lowerUrl = it.url.lowercase()
+            !lowerUrl.contains("github.com") && 
+            !lowerUrl.contains("reddit.com") && 
+            !lowerUrl.contains("youtube.com")
+        }
+        
+        // Max 5 dynamic dials add karo (Total 8 items = 2 rows)
+        finalDials.addAll(dynamicDials.take(5))
+
+        for (dial in finalDials) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
             
             val iconImg = itemView.findViewById<ImageView>(R.id.sd_icon)
@@ -131,15 +139,25 @@ class MainActivity : AppCompatActivity() {
 
             nameText.text = dial.title
 
-            when (dial.title.lowercase()) {
-                "github" -> { iconImg.setImageResource(R.drawable.ic_github); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
-                "reddit" -> { iconImg.setImageResource(R.drawable.ic_reddit); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
-                "youtube" -> { iconImg.setImageResource(R.drawable.ic_youtube); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
-                else -> {
-                    iconImg.visibility = View.GONE
-                    letterText.visibility = View.VISIBLE
-                    letterText.text = if(dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
-                }
+            if (dial.url.contains("github.com")) {
+                iconImg.setImageResource(R.drawable.ic_github)
+                iconImg.visibility = View.VISIBLE
+                letterText.visibility = View.GONE
+            } else if (dial.url.contains("reddit.com")) {
+                iconImg.setImageResource(R.drawable.ic_reddit)
+                iconImg.visibility = View.VISIBLE
+                letterText.visibility = View.GONE
+            } else if (dial.url.contains("youtube.com")) {
+                iconImg.setImageResource(R.drawable.ic_youtube)
+                iconImg.visibility = View.VISIBLE
+                letterText.visibility = View.GONE
+            } else {
+                // Naye site ke liye pehle akshar dikhao, phir logo fetch karo
+                iconImg.visibility = View.GONE
+                letterText.visibility = View.VISIBLE
+                letterText.text = if(dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
+                
+                loadGrayscaleFavicon(dial.url, iconImg, letterText)
             }
 
             itemView.setOnClickListener {
@@ -155,6 +173,36 @@ class MainActivity : AppCompatActivity() {
 
             speedDialGrid?.addView(itemView)
         }
+    }
+
+    // NAYA: Website ka Favicon laakar Gray (Grayscale) karne ka function
+    private fun loadGrayscaleFavicon(url: String, imageView: ImageView, textView: TextView) {
+        Thread {
+            try {
+                val domain = Uri.parse(url).host ?: return@Thread
+                val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=64"
+                val connection = java.net.URL(faviconUrl).openConnection() as java.net.HttpURLConnection
+                connection.doInput = true
+                connection.connect()
+                val input = connection.inputStream
+                val bitmap = android.graphics.BitmapFactory.decodeStream(input)
+                if (bitmap != null) {
+                    runOnUiThread {
+                        imageView.setImageBitmap(bitmap)
+                        imageView.visibility = View.VISIBLE
+                        textView.visibility = View.GONE
+                        
+                        // Grayscale Filter (White/Grey look)
+                        val colorMatrix = android.graphics.ColorMatrix()
+                        colorMatrix.setSaturation(0f)
+                        val filter = android.graphics.ColorMatrixColorFilter(colorMatrix)
+                        imageView.colorFilter = filter
+                    }
+                }
+            } catch (e: Exception) {
+                // Agar internet nahi hai ya logo nahi mila, toh First Letter hi dikhega
+            }
+        }.start()
     }
 
     private fun setupToolbar() {
