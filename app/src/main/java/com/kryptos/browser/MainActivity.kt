@@ -6,7 +6,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import java.io.File
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -30,6 +29,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import java.io.ByteArrayInputStream
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -94,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         updateTabCountUI()
         setupWebView()
         setupToolbar()
+        setupErrorPage()
         setupBackPressHandler()
         
         renderSpeedDials()
@@ -108,16 +109,11 @@ class MainActivity : AppCompatActivity() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
 
-    // ==========================================
-    // AUTO SPEED DIAL LOGIC (NEW)
-    // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
-        // Database se top 4 sites uthao
         var dials = dbHelper.getMostVisitedSites(4)
         
-        // Agar user naya hai (history khali hai), toh Default sites dikhao
         if (dials.isEmpty()) {
             dials = listOf(
                 HistoryItem("GitHub", "https://github.com", 0L),
@@ -135,7 +131,6 @@ class MainActivity : AppCompatActivity() {
 
             nameText.text = dial.title
 
-            // Icon Logic (Default sites ka logo, nayi sites ka First Letter)
             when (dial.title.lowercase()) {
                 "github" -> { iconImg.setImageResource(R.drawable.ic_github); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
                 "reddit" -> { iconImg.setImageResource(R.drawable.ic_reddit); iconImg.visibility = View.VISIBLE; letterText.visibility = View.GONE }
@@ -160,10 +155,7 @@ class MainActivity : AppCompatActivity() {
 
             speedDialGrid?.addView(itemView)
         }
-        // Note: "+ Add" button ka code yahan se hata diya gaya hai
     }
-
-    // ==========================================
 
     private fun setupToolbar() {
         val clearAddressBar = View.OnClickListener {
@@ -226,6 +218,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
+        
+        // NAYA: Privacy Shield Card Click
+        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener { showClearDataDialog() }
 
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
@@ -261,6 +256,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // NAYA: Error Buttons logic
+    private fun setupErrorPage() {
+        findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
+            lastFailedUrl?.let { loadUrlOrSearch(it) }
+        }
+        findViewById<Button>(R.id.error_btn_home)?.setOnClickListener {
+            showHomepageUI()
+        }
+    }
+
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -293,7 +298,9 @@ class MainActivity : AppCompatActivity() {
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
             
-            dbHelper.clearHistory() // Auto speed dial bhi clear ho jayega
+            // NAYA: History aur Bookmarks dono clear honge
+            dbHelper.clearHistory()
+            bookmarkDb.clearBookmarks()
             
             TabManager.tabsList.clear()
             TabManager.addNewTab("kryptos://home", "Home")
@@ -371,29 +378,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        updateTabCountUI()
-        renderSpeedDials() // Resume par speed dial update hoga
-        
-        val activeTab = TabManager.getActiveTab()
-        if (activeTab != null) {
-            if (activeTab.url == "kryptos://home") {
-                showHomepageUI()
-            } else if (webView.url != activeTab.url) {
-                loadUrlOrSearch(activeTab.url)
-            }
-        }
-    }
-
-        // NAYA: Auto Cache Cleaner Logic
+    // NAYA: Auto Cache Cleaner Logic
     private fun checkAndClearCache() {
         Thread {
             try {
                 val cacheSize = getDirSize(cacheDir)
                 val sizeInMB = cacheSize / (1024 * 1024)
                 
-                // Agar cache 100MB se zyada hai toh clear karo
                 if (sizeInMB > 100) {
                     runOnUiThread {
                         webView.clearCache(true)
@@ -413,6 +404,21 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) { }
         return size
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateTabCountUI()
+        renderSpeedDials()
+        
+        val activeTab = TabManager.getActiveTab()
+        if (activeTab != null) {
+            if (activeTab.url == "kryptos://home") {
+                showHomepageUI()
+            } else if (webView.url != activeTab.url) {
+                loadUrlOrSearch(activeTab.url)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -448,7 +454,7 @@ class MainActivity : AppCompatActivity() {
             if (url != "about:blank" && url != null) {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
-                dbHelper.addHistory(title, url) // History aur Visit Count update hoga
+                dbHelper.addHistory(title, url)
                 
                 if (bookmarkDb.isBookmarked(url)) {
                     btnBookmark?.setImageResource(R.drawable.ic_star_filled)
