@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Dialog
 import android.app.DownloadManager
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.Build
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -113,6 +116,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
+    }
+        // NAYA: Screen Lock Receiver
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                // Check if Incognito Auto-Kill is enabled in Settings
+                if (prefs.getBoolean("incognito_kill", false)) {
+                    executeIncognitoKill()
+                }
+            }
+        }
     }
 
     // ==========================================
