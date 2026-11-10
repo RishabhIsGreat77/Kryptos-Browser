@@ -2,6 +2,7 @@ package com.kryptos.browser
 
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -30,7 +31,7 @@ class SettingsActivity : AppCompatActivity() {
         val switchIncognitoKill = findViewById<Switch>(R.id.switch_incognito_kill)
         val switchPanicShake = findViewById<Switch>(R.id.switch_panic_shake)
         val switchGhostVault = findViewById<Switch>(R.id.switch_ghost_vault)
-        
+
         val txtClearData = findViewById<TextView>(R.id.txt_clear_data_settings)
         val txtCheckUpdates = findViewById<TextView>(R.id.txt_check_updates)
 
@@ -39,7 +40,8 @@ class SettingsActivity : AppCompatActivity() {
         switchDarkMode.isChecked = prefs.getBoolean("dark_mode", true)
         switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", false)
         switchPanicShake.isChecked = prefs.getBoolean("panic_shake", false)
-        switchGhostVault.isChecked = prefs.getBoolean("ghost_vault", false)
+        // V4: single source of truth — VaultManager se padho (default = true)
+        switchGhostVault.isChecked = VaultManager.isGhostVaultEnabled(this)
 
         // Listeners for Switches
         switchSuggestions.setOnCheckedChangeListener { _, isChecked ->
@@ -59,9 +61,26 @@ class SettingsActivity : AppCompatActivity() {
             prefs.edit().putBoolean("panic_shake", isChecked).apply()
         }
 
+        // ============================================================
+        // V4 GHOST VAULT TOGGLE
+        // ON  → agar setup nahi hua to VaultSetupActivity kholo
+        // OFF → command clear + vault lock (next ON par fresh setup)
+        // ============================================================
         switchGhostVault.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("ghost_vault", isChecked).apply()
-            // Agar Vault ON ho raha hai, toh future me yahan password setup trigger karenge
+            VaultManager.setGhostVaultEnabled(this, isChecked)
+
+            if (isChecked) {
+                if (!VaultManager.isVaultSetupDone(this)) {
+                    startActivity(Intent(this, VaultSetupActivity::class.java))
+                }
+            } else {
+                // Vault OFF → setup reset karo taaki next ON pe naya command set ho
+                prefs.edit()
+                    .putBoolean("is_vault_setup_done", false)
+                    .remove("vault_command")
+                    .putBoolean("is_vault_unlocked", false)
+                    .apply()
+            }
         }
 
         // Clear Data Option
@@ -213,17 +232,17 @@ class SettingsActivity : AppCompatActivity() {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_custom)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        
+
         val title = dialog.findViewById<TextView>(R.id.dialog_title)
         val msg = dialog.findViewById<TextView>(R.id.dialog_message)
         val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
         val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
-        
+
         title.visibility = View.GONE
         btnCancel.visibility = View.GONE
         btnConfirm.text = "OK"
         msg.text = message
-        
+
         btnConfirm.setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
