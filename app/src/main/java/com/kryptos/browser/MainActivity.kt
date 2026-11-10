@@ -385,8 +385,26 @@ class MainActivity : AppCompatActivity() {
         }
         dialog.show()
     }
-
+    
     private fun loadUrlOrSearch(input: String) {
+        val vaultCommand = prefs.getString("vault_command", "") ?: ""
+        val inputLower = input.lowercase().trim()
+
+        // 1. Check if user typed the secret vault command
+        if (vaultCommand.isNotEmpty() && inputLower == "kryptos://$vaultCommand") {
+            // VAULT UNLOCKED!
+            Toast.makeText(this, "Ghost Vault Unlocked! Real Data Loaded.", Toast.LENGTH_LONG).show()
+            
+            // Clear address bar and go home
+            addressBar?.setText("kryptos://home")
+            addressBar?.clearFocus()
+            
+            // TODO: Future logic to load real SQLite database (Isolated)
+            showHomepageUI()
+            return // Stop execution here
+        }
+
+        // 2. Normal URL/Search logic
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
