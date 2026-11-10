@@ -530,23 +530,26 @@ class MainActivity : AppCompatActivity() {
         webView.clearHistory()
 
         try {
+            // असली कैलकुलेटर ऐप खोलने की कोशिश
             val intent = Intent()
             intent.action = Intent.ACTION_MAIN
             intent.addCategory(Intent.CATEGORY_APP_CALCULATOR)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
         } catch (e: Exception) {
-            val fallbackIntent = Intent(this, CalculatorActivity::class.java)
-            fallbackIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(fallbackIntent)
+            // अगर फोन में कैलकुलेटर नहीं मिला, तो होम स्क्रीन पर भेज दो (ताकि क्रैश न हो)
+            val homeIntent = Intent(Intent.ACTION_MAIN)
+            homeIntent.addCategory(Intent.CATEGORY_HOME)
+            homeIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(homeIntent)
         }
 
+        // ब्राउज़र को बंद और किल करो
         finishAffinity()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
         }
     }
-
     private fun executeIncognitoKill() {
         webView.clearCache(true)
         webView.clearHistory()
