@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
+    private lateinit var panicSensorManager: PanicSensorManager
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -99,6 +100,11 @@ class MainActivity : AppCompatActivity() {
         
         renderSpeedDials()
         checkAndClearCache()
+
+        // NAYA: Panic Sensor Setup
+        panicSensorManager = PanicSensorManager(this) {
+            executePanicProtocol()
+        }
     }
 
     private fun updateTrackerUI() {
@@ -108,18 +114,21 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
-    
+
+    // ==========================================
+    // SPEED DIAL LOGIC
+    // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
         
         val finalDials = mutableListOf<HistoryItem>()
         
-        // 1. Permanent Default Dials (Ye hamesha rahenge)
+        // 1. Permanent Default Dials
         finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
         finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        // 2. Dynamic Dials (Database se, par default wale hata kar)
+        // 2. Dynamic Dials from DB
         val dynamicDials = dbHelper.getMostVisitedSites(10).filter { 
             val lowerUrl = it.url.lowercase()
             !lowerUrl.contains("github.com") && 
@@ -127,7 +136,6 @@ class MainActivity : AppCompatActivity() {
             !lowerUrl.contains("youtube.com")
         }
         
-        // Max 5 dynamic dials add karo (Total 8 items = 2 rows)
         finalDials.addAll(dynamicDials.take(5))
 
         for (dial in finalDials) {
@@ -152,11 +160,9 @@ class MainActivity : AppCompatActivity() {
                 iconImg.visibility = View.VISIBLE
                 letterText.visibility = View.GONE
             } else {
-                // Naye site ke liye pehle akshar dikhao, phir logo fetch karo
                 iconImg.visibility = View.GONE
                 letterText.visibility = View.VISIBLE
                 letterText.text = if(dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
-                
                 loadGrayscaleFavicon(dial.url, iconImg, letterText)
             }
 
@@ -175,7 +181,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NAYA: Website ka Favicon laakar Gray (Grayscale) karne ka function
     private fun loadGrayscaleFavicon(url: String, imageView: ImageView, textView: TextView) {
         Thread {
             try {
@@ -192,19 +197,20 @@ class MainActivity : AppCompatActivity() {
                         imageView.visibility = View.VISIBLE
                         textView.visibility = View.GONE
                         
-                        // Grayscale Filter (White/Grey look)
+                        // Grayscale Filter
                         val colorMatrix = android.graphics.ColorMatrix()
                         colorMatrix.setSaturation(0f)
                         val filter = android.graphics.ColorMatrixColorFilter(colorMatrix)
                         imageView.colorFilter = filter
                     }
                 }
-            } catch (e: Exception) {
-                // Agar internet nahi hai ya logo nahi mila, toh First Letter hi dikhega
-            }
+            } catch (e: Exception) { }
         }.start()
     }
 
+    // ==========================================
+    // TOOLBAR & MENU
+    // ==========================================
     private fun setupToolbar() {
         val clearAddressBar = View.OnClickListener {
             if (addressBar?.text.toString() == "kryptos://home") {
@@ -267,6 +273,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
         
+        findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener { showClearDataDialog() }
+
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
@@ -284,7 +292,7 @@ class MainActivity : AppCompatActivity() {
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> { Toast.makeText(this, "Incognito Mode coming in V4!", Toast.LENGTH_SHORT).show(); true }
+                    1 -> { Toast.makeText(this, "Incognito Mode coming soon!", Toast.LENGTH_SHORT).show(); true }
                     2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
                     5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
                     3 -> {
@@ -301,7 +309,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NAYA: Error Buttons logic
     private fun setupErrorPage() {
         findViewById<Button>(R.id.error_btn_retry)?.setOnClickListener {
             lastFailedUrl?.let { loadUrlOrSearch(it) }
@@ -343,7 +350,6 @@ class MainActivity : AppCompatActivity() {
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
             
-            // NAYA: History aur Bookmarks dono clear honge
             dbHelper.clearHistory()
             bookmarkDb.clearBookmarks()
             
@@ -351,6 +357,7 @@ class MainActivity : AppCompatActivity() {
             TabManager.addNewTab("kryptos://home", "Home")
             updateTabCountUI()
             showHomepageUI()
+            renderSpeedDials()
             
             trackerCount = 0
             prefs.edit().putInt("tracker_count", 0).apply()
@@ -391,8 +398,12 @@ class MainActivity : AppCompatActivity() {
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
         btnBookmark?.setImageResource(R.drawable.ic_star_empty)
+        renderSpeedDials()
     }
 
+    // ==========================================
+    // WEBVIEW SETUP
+    // ==========================================
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -423,7 +434,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NAYA: Auto Cache Cleaner Logic
     private fun checkAndClearCache() {
         Thread {
             try {
@@ -451,6 +461,38 @@ class MainActivity : AppCompatActivity() {
         return size
     }
 
+    // ==========================================
+    // PANIC SHAKE PROTOCOL
+    // ==========================================
+    private fun executePanicProtocol() {
+        // 1. WebView ka data clear karo
+        webView.clearCache(true)
+        webView.clearHistory()
+        
+        // 2. Phone ka asli calculator kholne ki koshish karo
+        try {
+            val intent = Intent()
+            intent.action = Intent.ACTION_MAIN
+            intent.addCategory(Intent.CATEGORY_APP_CALCULATOR)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: Humara banaya hua Calculator
+            val fallbackIntent = Intent(this, CalculatorActivity::class.java)
+            fallbackIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(fallbackIntent)
+        }
+        
+        // 3. Browser ko puri tarah band karo
+        finishAffinity()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        }
+    }
+
+    // ==========================================
+    // LIFECYCLE METHODS
+    // ==========================================
     override fun onResume() {
         super.onResume()
         updateTabCountUI()
@@ -464,6 +506,18 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(activeTab.url)
             }
         }
+
+        // Start Panic Sensor if enabled
+        if (prefs.getBoolean("panic_shake", false)) {
+            panicSensorManager.startListening()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::panicSensorManager.isInitialized) {
+            panicSensorManager.stopListening()
+        }
     }
 
     override fun onDestroy() {
@@ -471,6 +525,9 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // ==========================================
+    // WEBVIEW CLIENTS
+    // ==========================================
     inner class KryptosWebViewClient : WebViewClient() {
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
