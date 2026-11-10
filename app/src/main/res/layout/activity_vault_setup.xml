@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/kryptos_background"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp">
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_fingerprint"
+        android:tint="@color/kryptos_primary" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Ghost Vault Setup"
+        android:textColor="@color/kryptos_text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Set a secret command to unlock your real vault. Type 'kryptos://yourcommand' in the address bar."
+        android:textColor="@color/kryptos_text_secondary"
+        android:textSize="12sp"
+        android:textAlignment="center" />
+
+    <EditText
+        android:id="@+id/et_vault_command"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/bg_address_bar_pill"
+        android:hint="e.g. vault or 1234"
+        android:paddingHorizontal="16dp"
+        android:textColor="@color/kryptos_text_primary"
+        android:textColorHint="@color/kryptos_text_secondary"
+        android:inputType="text"
+        android:maxLines="1" />
+
+    <Button
+        android:id="@+id/btn_save_vault"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="24dp"
+        android:text="Save Secret Command"
+        android:textAllCaps="false"
+        android:textColor="@color/kryptos_text_on_primary"
+        android:backgroundTint="@color/kryptos_primary" />
+
+</LinearLayout>
