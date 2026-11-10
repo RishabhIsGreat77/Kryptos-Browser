@@ -3,15 +3,15 @@ package com.kryptos.browser
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.app.DownloadManager
-import android.content.Context
 import android.content.BroadcastReceiver
-import android.content.IntentFilter
-import android.os.Build
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.LayoutInflater
@@ -71,6 +71,17 @@ class MainActivity : AppCompatActivity() {
         "facebook.com/tr", "scorecardresearch.com", "adservice.google.com"
     )
 
+    // NAYA: Screen Lock Receiver for Incognito Auto-Kill
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                if (prefs.getBoolean("incognito_kill", false)) {
+                    executeIncognitoKill()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
@@ -104,9 +115,17 @@ class MainActivity : AppCompatActivity() {
         renderSpeedDials()
         checkAndClearCache()
 
-        // NAYA: Panic Sensor Setup
+        // Panic Sensor Setup
         panicSensorManager = PanicSensorManager(this) {
             executePanicProtocol()
+        }
+
+        // Register Screen Off Receiver
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(screenOffReceiver, filter)
         }
     }
 
@@ -117,17 +136,6 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabCountUI() {
         txtTabCount?.text = TabManager.tabsList.size.toString()
     }
-        // NAYA: Screen Lock Receiver
-    private val screenOffReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                // Check if Incognito Auto-Kill is enabled in Settings
-                if (prefs.getBoolean("incognito_kill", false)) {
-                    executeIncognitoKill()
-                }
-            }
-        }
-    }
 
     // ==========================================
     // SPEED DIAL LOGIC
@@ -137,12 +145,10 @@ class MainActivity : AppCompatActivity() {
         
         val finalDials = mutableListOf<HistoryItem>()
         
-        // 1. Permanent Default Dials
         finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
         finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        // 2. Dynamic Dials from DB
         val dynamicDials = dbHelper.getMostVisitedSites(10).filter { 
             val lowerUrl = it.url.lowercase()
             !lowerUrl.contains("github.com") && 
@@ -211,7 +217,6 @@ class MainActivity : AppCompatActivity() {
                         imageView.visibility = View.VISIBLE
                         textView.visibility = View.GONE
                         
-                        // Grayscale Filter
                         val colorMatrix = android.graphics.ColorMatrix()
                         colorMatrix.setSaturation(0f)
                         val filter = android.graphics.ColorMatrixColorFilter(colorMatrix)
@@ -476,14 +481,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // PANIC SHAKE PROTOCOL
+    // PANIC SHAKE & INCOGNITO PROTOCOLS
     // ==========================================
     private fun executePanicProtocol() {
-        // 1. WebView ka data clear karo
         webView.clearCache(true)
         webView.clearHistory()
         
-        // 2. Phone ka asli calculator kholne ki koshish karo
         try {
             val intent = Intent()
             intent.action = Intent.ACTION_MAIN
@@ -491,17 +494,30 @@ class MainActivity : AppCompatActivity() {
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
         } catch (e: Exception) {
-            // Fallback: Humara banaya hua Calculator
             val fallbackIntent = Intent(this, CalculatorActivity::class.java)
             fallbackIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(fallbackIntent)
         }
         
-        // 3. Browser ko puri tarah band karo
         finishAffinity()
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
         }
+    }
+
+    private fun executeIncognitoKill() {
+        webView.clearCache(true)
+        webView.clearHistory()
+        WebStorage.getInstance().deleteAllData()
+        CookieManager.getInstance().removeAllCookies(null)
+        dbHelper.clearHistory()
+        
+        finishAffinity()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        }
+        
+        System.exit(0)
     }
 
     // ==========================================
@@ -521,7 +537,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Start Panic Sensor if enabled
         if (prefs.getBoolean("panic_shake", false)) {
             panicSensorManager.startListening()
         }
@@ -535,6 +550,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(screenOffReceiver)
+        } catch (e: Exception) { }
+        
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
     }
