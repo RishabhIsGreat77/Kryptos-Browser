@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
     private var trackerCount = 0
-    
+
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var panicSensorManager: PanicSensorManager
@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         "facebook.com/tr", "scorecardresearch.com", "adservice.google.com"
     )
 
-    // NAYA: Screen Lock Receiver for Incognito Auto-Kill
+    // Screen Lock Receiver for Incognito Auto-Kill
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
@@ -87,6 +87,9 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         setContentView(R.layout.activity_main)
 
+        // V4 GHOST VAULT: DB helpers default mein VaultManager se DB naam lete hain.
+        // SplashActivity ne launch pe vault lock kar diya hai, isliye yahan
+        // DECOY DB ban rahi hai (ghost_vault ON hai to). Toggle pe re-init hoga.
         dbHelper = HistoryDatabaseHelper(this)
         bookmarkDb = BookmarkDatabaseHelper(this)
 
@@ -111,7 +114,7 @@ class MainActivity : AppCompatActivity() {
         setupToolbar()
         setupErrorPage()
         setupBackPressHandler()
-        
+
         renderSpeedDials()
         checkAndClearCache()
 
@@ -142,25 +145,25 @@ class MainActivity : AppCompatActivity() {
     // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
-        
+
         val finalDials = mutableListOf<HistoryItem>()
-        
+
         finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
         finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        val dynamicDials = dbHelper.getMostVisitedSites(10).filter { 
+        val dynamicDials = dbHelper.getMostVisitedSites(10).filter {
             val lowerUrl = it.url.lowercase()
-            !lowerUrl.contains("github.com") && 
-            !lowerUrl.contains("reddit.com") && 
+            !lowerUrl.contains("github.com") &&
+            !lowerUrl.contains("reddit.com") &&
             !lowerUrl.contains("youtube.com")
         }
-        
+
         finalDials.addAll(dynamicDials.take(5))
 
         for (dial in finalDials) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
-            
+
             val iconImg = itemView.findViewById<ImageView>(R.id.sd_icon)
             val letterText = itemView.findViewById<TextView>(R.id.sd_letter)
             val nameText = itemView.findViewById<TextView>(R.id.sd_name)
@@ -182,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 iconImg.visibility = View.GONE
                 letterText.visibility = View.VISIBLE
-                letterText.text = if(dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
+                letterText.text = if (dial.title.isNotEmpty()) dial.title.substring(0, 1).uppercase() else "W"
                 loadGrayscaleFavicon(dial.url, iconImg, letterText)
             }
 
@@ -216,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                         imageView.setImageBitmap(bitmap)
                         imageView.visibility = View.VISIBLE
                         textView.visibility = View.GONE
-                        
+
                         val colorMatrix = android.graphics.ColorMatrix()
                         colorMatrix.setSaturation(0f)
                         val filter = android.graphics.ColorMatrixColorFilter(colorMatrix)
@@ -236,9 +239,9 @@ class MainActivity : AppCompatActivity() {
                 addressBar?.setText("")
             }
         }
-        
+
         addressBar?.setOnClickListener(clearAddressBar)
-        
+
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
                 addressBar?.setText("")
@@ -271,7 +274,7 @@ class MainActivity : AppCompatActivity() {
         btnBookmark?.setOnClickListener {
             val currentUrl = webView.url
             val currentTitle = webView.title ?: "Untitled"
-            
+
             if (currentUrl != null && currentUrl != "about:blank" && !currentUrl.startsWith("kryptos://")) {
                 if (bookmarkDb.isBookmarked(currentUrl)) {
                     bookmarkDb.removeBookmark(currentUrl)
@@ -291,7 +294,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_back)?.setOnClickListener { if (webView.canGoBack()) webView.goBack() }
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
-        
+
         findViewById<LinearLayout>(R.id.card_privacy_shield)?.setOnClickListener { showClearDataDialog() }
 
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
@@ -302,7 +305,7 @@ class MainActivity : AppCompatActivity() {
             val popup = PopupMenu(this, view)
             val isDark = prefs.getBoolean("dark_mode", true)
             val themeText = if (isDark) "Switch to Light Mode" else "Switch to Dark Mode"
-            
+
             popup.menu.add(0, 1, 1, "Incognito Mode")
             popup.menu.add(0, 2, 2, "History")
             popup.menu.add(0, 5, 5, "Bookmarks")
@@ -368,16 +371,16 @@ class MainActivity : AppCompatActivity() {
             webView.clearHistory()
             WebStorage.getInstance().deleteAllData()
             CookieManager.getInstance().removeAllCookies(null)
-            
+
             dbHelper.clearHistory()
             bookmarkDb.clearBookmarks()
-            
+
             TabManager.tabsList.clear()
             TabManager.addNewTab("kryptos://home", "Home")
             updateTabCountUI()
             showHomepageUI()
             renderSpeedDials()
-            
+
             trackerCount = 0
             prefs.edit().putInt("tracker_count", 0).apply()
             updateTrackerUI()
@@ -385,39 +388,60 @@ class MainActivity : AppCompatActivity() {
         }
         dialog.show()
     }
-    
+
+    // ==========================================
+    // URL / SEARCH LOADER + GHOST VAULT INTERCEPT
+    // ==========================================
     private fun loadUrlOrSearch(input: String) {
-        val vaultCommand = prefs.getString("vault_command", "") ?: ""
         val inputLower = input.lowercase().trim()
 
-        // 1. Check if user typed the secret vault command
-        if (vaultCommand.isNotEmpty() && inputLower == "kryptos://$vaultCommand") {
-            // VAULT UNLOCKED!
-            Toast.makeText(this, "Ghost Vault Unlocked! Real Data Loaded.", Toast.LENGTH_LONG).show()
-            
-            // Clear address bar and go home
-            addressBar?.setText("kryptos://home")
-            addressBar?.clearFocus()
-            
-            // TODO: Future logic to load real SQLite database (Isolated)
-            showHomepageUI()
-            return // Stop execution here
+        // V4 GHOST VAULT: kryptos://[command] intercept
+        if (inputLower.startsWith("kryptos://")) {
+            val cmd = inputLower.removePrefix("kryptos://").trim()
+
+            // Sirf tab jab ghost_vault toggle ON ho aur command sahi ho
+            if (VaultManager.isGhostVaultEnabled(this) && VaultManager.isCorrectCommand(this, cmd)) {
+
+                // Purane helper band karo
+                try { dbHelper.close() } catch (e: Exception) { }
+                try { bookmarkDb.close() } catch (e: Exception) { }
+
+                // State toggle (unlocked ↔ locked)
+                val unlocked = VaultManager.toggleVault(this)
+
+                // Naye DB naam ke saath helper re-init
+                dbHelper = HistoryDatabaseHelper(this, VaultManager.getHistoryDbName(this))
+                bookmarkDb = BookmarkDatabaseHelper(this, VaultManager.getBookmarkDbName(this))
+
+                val msg = if (unlocked) "Ghost Vault Unlocked — Real Data Loaded"
+                          else "Ghost Vault Locked — Decoy Data Loaded"
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+
+                addressBar?.setText("kryptos://home")
+                addressBar?.clearFocus()
+
+                // Re-render speed dial from new DB + go home
+                showHomepageUI()
+                return
+            }
+            // Galat command ya ghost_vault OFF → normal search pe gira do
+            // (plausible deniability ke liye — error mat dikhao)
         }
 
-        // 2. Normal URL/Search logic
+        // Normal URL / Search logic
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
             searchEngines[selectedEngineIndex].second + Uri.encode(input)
         }
-        
+
         TabManager.updateActiveTabTitle(url, url)
         homepageContainer?.visibility = View.GONE
         errorContainer?.visibility = View.GONE
-        
+
         bottomDock?.setBackgroundColor(Color.TRANSPARENT)
         bottomDock?.elevation = 0f
-        
+
         addressBar?.setText(url)
         webView.loadUrl(url)
     }
@@ -428,10 +452,10 @@ class MainActivity : AppCompatActivity() {
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
-        
+
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
         bottomDock?.elevation = 12f
-        
+
         addressBar?.setText("kryptos://home")
         progressBar?.visibility = View.GONE
         btnBookmark?.setImageResource(R.drawable.ic_star_empty)
@@ -452,9 +476,9 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
-        
+
         settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
-        
+
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
 
@@ -476,7 +500,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val cacheSize = getDirSize(cacheDir)
                 val sizeInMB = cacheSize / (1024 * 1024)
-                
+
                 if (sizeInMB > 100) {
                     runOnUiThread {
                         webView.clearCache(true)
@@ -504,7 +528,7 @@ class MainActivity : AppCompatActivity() {
     private fun executePanicProtocol() {
         webView.clearCache(true)
         webView.clearHistory()
-        
+
         try {
             val intent = Intent()
             intent.action = Intent.ACTION_MAIN
@@ -516,7 +540,7 @@ class MainActivity : AppCompatActivity() {
             fallbackIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(fallbackIntent)
         }
-        
+
         finishAffinity()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
@@ -529,12 +553,12 @@ class MainActivity : AppCompatActivity() {
         WebStorage.getInstance().deleteAllData()
         CookieManager.getInstance().removeAllCookies(null)
         dbHelper.clearHistory()
-        
+
         finishAffinity()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
         }
-        
+
         System.exit(0)
     }
 
@@ -545,7 +569,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updateTabCountUI()
         renderSpeedDials()
-        
+
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
@@ -571,7 +595,7 @@ class MainActivity : AppCompatActivity() {
         try {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
-        
+
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
     }
@@ -599,16 +623,16 @@ class MainActivity : AppCompatActivity() {
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
-        
+
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar?.visibility = View.GONE
-            
+
             if (url != "about:blank" && url != null) {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
                 dbHelper.addHistory(title, url)
-                
+
                 if (bookmarkDb.isBookmarked(url)) {
                     btnBookmark?.setImageResource(R.drawable.ic_star_filled)
                 } else {
@@ -616,7 +640,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        
+
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
             super.onReceivedError(view, request, error)
             if (request?.isForMainFrame == true) {
