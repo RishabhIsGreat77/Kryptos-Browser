@@ -1,29 +1,18 @@
 package com.kryptos.browser
 
 import android.app.Dialog
-import android.app.ProgressDialog
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.Window
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.content.FileProvider
-import org.json.JSONObject
-import java.io.File
-import java.net.URL
-import javax.net.ssl.HttpsURLConnection
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -35,14 +24,24 @@ class SettingsActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
 
+        // UI Bindings
         val switchSuggestions = findViewById<Switch>(R.id.switch_suggestions)
         val switchDarkMode = findViewById<Switch>(R.id.switch_dark_mode)
+        val switchIncognitoKill = findViewById<Switch>(R.id.switch_incognito_kill)
+        val switchPanicShake = findViewById<Switch>(R.id.switch_panic_shake)
+        val switchGhostVault = findViewById<Switch>(R.id.switch_ghost_vault)
+        
         val txtClearData = findViewById<TextView>(R.id.txt_clear_data_settings)
         val txtCheckUpdates = findViewById<TextView>(R.id.txt_check_updates)
 
+        // Load Saved States
         switchSuggestions.isChecked = prefs.getBoolean("search_suggestions", true)
         switchDarkMode.isChecked = prefs.getBoolean("dark_mode", true)
+        switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", false)
+        switchPanicShake.isChecked = prefs.getBoolean("panic_shake", false)
+        switchGhostVault.isChecked = prefs.getBoolean("ghost_vault", false)
 
+        // Listeners for Switches
         switchSuggestions.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("search_suggestions", isChecked).apply()
         }
@@ -52,6 +51,20 @@ class SettingsActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
         }
 
+        switchIncognitoKill.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("incognito_kill", isChecked).apply()
+        }
+
+        switchPanicShake.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("panic_shake", isChecked).apply()
+        }
+
+        switchGhostVault.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("ghost_vault", isChecked).apply()
+            // Agar Vault ON ho raha hai, toh future me yahan password setup trigger karenge
+        }
+
+        // Clear Data Option
         txtClearData.setOnClickListener {
             val dialog = Dialog(this)
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -79,7 +92,7 @@ class SettingsActivity : AppCompatActivity() {
             dialog.show()
         }
 
-        // NAYA: Manual Update Check Logic
+        // Check for Updates
         txtCheckUpdates.setOnClickListener {
             showCustomToast("Checking for updates...")
             checkForUpdates()
@@ -89,17 +102,17 @@ class SettingsActivity : AppCompatActivity() {
     private fun checkForUpdates() {
         Thread {
             try {
-                val url = URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
-                val connection = url.openConnection() as HttpsURLConnection
+                val url = java.net.URL("https://api.github.com/repos/RishabhIsGreat77/Kryptos-Browser/releases/latest")
+                val connection = url.openConnection() as javax.net.ssl.HttpsURLConnection
                 connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
                 connection.setRequestProperty("User-Agent", "KryptosBrowser-Updater")
 
                 val responseCode = connection.responseCode
                 if (responseCode == 200) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(response)
+                    val json = org.json.JSONObject(response)
                     val latestVersion = json.getString("tag_name").replace("v", "").replace("-beta", "").trim()
-                    val currentVersion = "3.1.0"
+                    val currentVersion = "3.2.0" // Update this when new version is built
 
                     runOnUiThread {
                         if (latestVersion > currentVersion) {
@@ -152,17 +165,17 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun downloadAndInstallApk(apkUrl: String) {
-        val progressDialog = ProgressDialog(this)
+        val progressDialog = android.app.ProgressDialog(this)
         progressDialog.setMessage("Downloading update...")
         progressDialog.setCancelable(false)
         progressDialog.show()
 
         Thread {
             try {
-                val url = URL(apkUrl)
-                val connection = url.openConnection() as HttpsURLConnection
+                val url = java.net.URL(apkUrl)
+                val connection = url.openConnection() as javax.net.ssl.HttpsURLConnection
                 connection.connect()
-                val apkFile = File(externalCacheDir, "kryptos_update.apk")
+                val apkFile = java.io.File(externalCacheDir, "kryptos_update.apk")
                 connection.inputStream.use { input -> apkFile.outputStream().use { output -> input.copyTo(output) } }
                 runOnUiThread {
                     progressDialog.dismiss()
@@ -177,20 +190,20 @@ class SettingsActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun installApk(apkFile: File) {
+    private fun installApk(apkFile: java.io.File) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!packageManager.canRequestPackageInstalls()) {
-                val intent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                intent.data = Uri.parse("package:$packageName")
+                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                intent.data = android.net.Uri.parse("package:$packageName")
                 startActivity(intent)
                 return
             }
         }
-        val apkUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
+        val apkUri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", apkFile)
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
             setDataAndType(apkUri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(intent)
     }
