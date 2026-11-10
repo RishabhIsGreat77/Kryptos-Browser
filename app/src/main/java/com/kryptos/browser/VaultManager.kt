@@ -3,25 +3,13 @@ package com.kryptos.browser
 import android.content.Context
 import android.content.SharedPreferences
 
-/**
- * VaultManager — Ghost Vault Dual-Database Controller (Kryptos Browser V4)
- *
- * Real DB  → user's actual history & bookmarks
- * Decoy DB → fake / safe-looking history & bookmarks
- *
- * Default state  = LOCKED   → Decoy DBs loaded (safe for prying eyes)
- * Vault command  = UNLOCKED → Real DBs loaded (only after entering secret)
- *
- * Usage in activities / helpers:
- *   val dbName = VaultManager.getHistoryDbName(context)
- *   val helper = HistoryDatabaseHelper(context, dbName)
- */
 object VaultManager {
 
     private const val PREFS_NAME = "kryptos_prefs"
     private const val KEY_VAULT_SETUP = "is_vault_setup_done"
     private const val KEY_VAULT_COMMAND = "vault_command"
     private const val KEY_VAULT_UNLOCKED = "is_vault_unlocked"
+    private const val KEY_GHOST_VAULT = "ghost_vault"
 
     // Dual-Database names
     const val DB_HISTORY_REAL = "KryptosHistory.db"
@@ -31,6 +19,15 @@ object VaultManager {
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /* ---------- Ghost Vault master toggle ---------- */
+
+    fun isGhostVaultEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_GHOST_VAULT, true)
+
+    fun setGhostVaultEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_GHOST_VAULT, enabled).apply()
+    }
 
     /* ---------- Vault Setup ---------- */
 
@@ -68,7 +65,7 @@ object VaultManager {
 
     /**
      * Flip between locked/unlocked.
-     * @return new state — true = unlocked (Real DB), false = locked (Decoy DB)
+     * @return naya state — true = unlocked (Real DB), false = locked (Decoy DB)
      */
     fun toggleVault(context: Context): Boolean {
         val next = !isVaultUnlocked(context)
@@ -76,11 +73,17 @@ object VaultManager {
         return next
     }
 
-    /* ---------- Current DB Names ---------- */
+    /* ---------- Current DB Names (final resolver) ---------- */
 
-    fun getHistoryDbName(context: Context): String =
-        if (isVaultUnlocked(context)) DB_HISTORY_REAL else DB_HISTORY_DECOY
+    fun getHistoryDbName(context: Context): String {
+        // Ghost Vault OFF → normal browser, always REAL
+        if (!isGhostVaultEnabled(context)) return DB_HISTORY_REAL
+        // Ghost Vault ON → locked = decoy, unlocked = real
+        return if (isVaultUnlocked(context)) DB_HISTORY_REAL else DB_HISTORY_DECOY
+    }
 
-    fun getBookmarkDbName(context: Context): String =
-        if (isVaultUnlocked(context)) DB_BOOKMARKS_REAL else DB_BOOKMARKS_DECOY
+    fun getBookmarkDbName(context: Context): String {
+        if (!isGhostVaultEnabled(context)) return DB_BOOKMARKS_REAL
+        return if (isVaultUnlocked(context)) DB_BOOKMARKS_REAL else DB_BOOKMARKS_DECOY
+    }
 }
