@@ -1,6 +1,7 @@
 package com.kryptos.browser
 
 import android.annotation.SuppressLint
+import com.kryptos.browser.PanicSensorManager
 import android.app.Dialog
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
