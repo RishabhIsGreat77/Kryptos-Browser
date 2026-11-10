@@ -5,24 +5,24 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-// Version 1 se 2 kar diya hai taaki naya column add ho sake
-class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 2) {
+class HistoryDatabaseHelper(
+    context: Context,
+    dbName: String = VaultManager.getHistoryDbName(context)
+) : SQLiteOpenHelper(context, dbName, null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        // NAYA: visit_count column add kiya gaya hai
         val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER, visit_count INTEGER)"
         db.execSQL(createTable)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Purana table delete karke naya banayenge
         db.execSQL("DROP TABLE IF EXISTS history")
         onCreate(db)
     }
 
     fun addHistory(title: String, url: String) {
         val db = this.writableDatabase
-        
+
         // Check karo pehle se kitni baar khula hai
         val cursor = db.rawQuery("SELECT visit_count FROM history WHERE url=?", arrayOf(url))
         var count = 1
@@ -35,7 +35,7 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
             put("title", title)
             put("url", url)
             put("timestamp", System.currentTimeMillis())
-            put("visit_count", count) // Counter update
+            put("visit_count", count)
         }
         db.insertWithOnConflict("history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         db.close()
@@ -59,11 +59,9 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
         return historyList
     }
 
-    // NAYA: Top 4 sabse zyada visit ki gayi sites nikalna
     fun getMostVisitedSites(limit: Int): List<HistoryItem> {
         val list = mutableListOf<HistoryItem>()
         val db = this.readableDatabase
-        // Order by visit_count descending
         val cursor = db.rawQuery("SELECT * FROM history ORDER BY visit_count DESC LIMIT $limit", null)
 
         if (cursor.moveToFirst()) {
