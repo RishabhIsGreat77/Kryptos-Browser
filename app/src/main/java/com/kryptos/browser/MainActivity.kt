@@ -385,37 +385,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // URL / SEARCH LOADER + GHOST VAULT INTERCEPT
+    // URL / SEARCH LOADER
     // ==========================================
     private fun loadUrlOrSearch(input: String) {
-        val inputLower = input.lowercase().trim()
-
-        if (inputLower.startsWith("kryptos://")) {
-            val cmd = inputLower.removePrefix("kryptos://").trim()
-
-            if (VaultManager.isGhostVaultEnabled(this) && VaultManager.isCorrectCommand(this, cmd)) {
-
-                try { dbHelper.close() } catch (e: Exception) { }
-                try { bookmarkDb.close() } catch (e: Exception) { }
-
-                val unlocked = VaultManager.toggleVault(this)
-
-                dbHelper = HistoryDatabaseHelper(this, VaultManager.getHistoryDbName(this))
-                bookmarkDb = BookmarkDatabaseHelper(this, VaultManager.getBookmarkDbName(this))
-
-                val msg = if (unlocked) "Ghost Vault Unlocked — Real Data Loaded"
-                          else "Ghost Vault Locked — Decoy Data Loaded"
-                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-
-                addressBar?.setText("kryptos://home")
-                addressBar?.clearFocus()
-
-                // Recreate activity to reload UI and flush old data
-                recreate()
-                return
-            }
-        }
-
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
