@@ -1,11 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" 
+    android:layout_height="match_parent"
     android:background="@color/kryptos_background">
 
-    <LinearLayout android:id="@+id/bookmarks_top_bar" android:layout_width="match_parent" android:layout_height="56dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp">
-        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Bookmarks" android:textColor="@color/kryptos_text_primary" android:textSize="22sp" android:textStyle="bold" />
+    <LinearLayout 
+        android:id="@+id/bookmarks_top_bar" 
+        android:layout_width="match_parent" 
+        android:layout_height="56dp" 
+        android:orientation="horizontal" 
+        android:gravity="center_vertical" 
+        android:paddingHorizontal="16dp">
+        
+        <TextView 
+            android:layout_width="0dp" 
+            android:layout_height="wrap_content" 
+            android:layout_weight="1" 
+            android:text="Bookmarks" 
+            android:textColor="@color/kryptos_text_primary" 
+            android:textSize="22sp" 
+            android:textStyle="bold" />
+
+        <!-- Clear All Trash Icon (Option B) -->
+        <ImageView
+            android:id="@+id/btn_clear_bookmarks"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/kryptos_error"
+            android:contentDescription="Clear all bookmarks" />
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/bookmarks_recycler_view" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/bookmarks_top_bar" android:padding="12dp" />
+    <androidx.recyclerview.widget.RecyclerView 
+        android:id="@+id/bookmarks_recycler_view" 
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent" 
+        android:layout_below="@id/bookmarks_top_bar" 
+        android:padding="12dp" />
 </RelativeLayout>
