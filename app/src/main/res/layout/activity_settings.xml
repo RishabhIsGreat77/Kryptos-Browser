@@ -60,7 +60,7 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <!-- NAYA SECTION: SECURITY & PRIVACY -->
+        <!-- SECURITY & PRIVACY SECTION -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -98,37 +98,6 @@
             </LinearLayout>
             <Switch
                 android:id="@+id/switch_incognito_kill"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <!-- Panic Shake Toggle -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingVertical="12dp">
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Panic Shake"
-                    android:textColor="@color/kryptos_text_primary"
-                    android:textSize="16sp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Shake phone to instantly close browser"
-                    android:textColor="@color/kryptos_text_secondary"
-                    android:textSize="12sp"/>
-            </LinearLayout>
-            <Switch
-                android:id="@+id/switch_panic_shake"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
