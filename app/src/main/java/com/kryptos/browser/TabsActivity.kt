@@ -4,8 +4,10 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -15,6 +17,10 @@ class TabsActivity : AppCompatActivity() {
     private lateinit var adapter: TabsAdapter
     private lateinit var btnNormal: TextView
     private lateinit var btnIncognito: TextView
+    private lateinit var layoutNormal: LinearLayout
+    private lateinit var layoutIncognito: LinearLayout
+    private lateinit var btnAddNormal: ImageButton
+    private lateinit var btnAddIncognito: ImageButton
 
     private var isIncognitoMode = false
 
@@ -25,6 +31,10 @@ class TabsActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.tabs_recycler_view)
         btnNormal = findViewById(R.id.btn_tab_normal)
         btnIncognito = findViewById(R.id.btn_tab_incognito)
+        layoutNormal = findViewById(R.id.layout_tab_normal)
+        layoutIncognito = findViewById(R.id.layout_tab_incognito)
+        btnAddNormal = findViewById(R.id.btn_add_normal_tab)
+        btnAddIncognito = findViewById(R.id.btn_add_incognito_tab)
 
         recyclerView.layoutManager = GridLayoutManager(this, 2)
 
@@ -53,18 +63,15 @@ class TabsActivity : AppCompatActivity() {
             updateTabList()
         }
 
-        // New Tab (+) Button logic
-        findViewById<ImageButton>(R.id.btn_new_tab).setOnClickListener {
-            val title = if (isIncognitoMode) "Incognito Tab" else "New Tab"
-            val newTab = TabManager.addNewTab("kryptos://home", title, isIncognitoMode)
+        // Normal Tab Add Button
+        btnAddNormal.setOnClickListener {
+            val newTab = TabManager.addNewTab("kryptos://home", "New Tab", false)
             TabManager.setActiveTab(newTab.id)
             finish()
         }
 
-        // Dedicated Incognito Tab Button
-        findViewById<ImageButton>(R.id.btn_new_incognito_tab).setOnClickListener {
-            isIncognitoMode = true
-            updateTabSelectorUI()
+        // Incognito Tab Add Button
+        btnAddIncognito.setOnClickListener {
             val newTab = TabManager.addNewTab("kryptos://home", "Incognito Tab", true)
             TabManager.setActiveTab(newTab.id)
             finish()
@@ -77,20 +84,25 @@ class TabsActivity : AppCompatActivity() {
 
     private fun updateTabSelectorUI() {
         if (isIncognitoMode) {
-            btnIncognito.setBackgroundResource(R.drawable.bg_speed_dial_box)
+            layoutIncognito.setBackgroundResource(R.drawable.bg_speed_dial_box)
             btnIncognito.setTextColor(Color.parseColor("#FFFFFF"))
-            btnNormal.setBackgroundColor(Color.TRANSPARENT)
+            btnAddIncognito.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_primary)
+            
+            layoutNormal.setBackgroundColor(Color.TRANSPARENT)
             btnNormal.setTextColor(Color.parseColor("#8B8B93"))
+            btnAddNormal.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_secondary)
         } else {
-            btnNormal.setBackgroundResource(R.drawable.bg_speed_dial_box)
+            layoutNormal.setBackgroundResource(R.drawable.bg_speed_dial_box)
             btnNormal.setTextColor(Color.parseColor("#FFFFFF"))
-            btnIncognito.setBackgroundColor(Color.TRANSPARENT)
+            btnAddNormal.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_primary)
+            
+            layoutIncognito.setBackgroundColor(Color.TRANSPARENT)
             btnIncognito.setTextColor(Color.parseColor("#8B8B93"))
+            btnAddIncognito.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_secondary)
         }
     }
 
     private fun updateTabList() {
-        // Filter tabs based on current mode
         val filteredTabs = TabManager.tabsList.filter { it.isIncognito == isIncognitoMode }.toMutableList()
         adapter.updateTabs(filteredTabs)
     }
