@@ -89,6 +89,18 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Empty State -->
+    <TextView
+        android:id="@+id/txt_empty_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/tab_selector_layout"
+        android:text="No tabs open"
+        android:textColor="@color/kryptos_text_secondary"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:visibility="gone" />
+
     <!-- Tabs Grid -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tabs_recycler_view"
