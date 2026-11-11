@@ -2,7 +2,6 @@ package com.kryptos.browser
 
 import android.app.Dialog
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -29,7 +28,6 @@ class SettingsActivity : AppCompatActivity() {
         val switchSuggestions = findViewById<Switch>(R.id.switch_suggestions)
         val switchDarkMode = findViewById<Switch>(R.id.switch_dark_mode)
         val switchIncognitoKill = findViewById<Switch>(R.id.switch_incognito_kill)
-        val switchGhostVault = findViewById<Switch>(R.id.switch_ghost_vault)
 
         val txtClearData = findViewById<TextView>(R.id.txt_clear_data_settings)
         val txtCheckUpdates = findViewById<TextView>(R.id.txt_check_updates)
@@ -38,9 +36,6 @@ class SettingsActivity : AppCompatActivity() {
         switchSuggestions.isChecked = prefs.getBoolean("search_suggestions", true)
         switchDarkMode.isChecked = prefs.getBoolean("dark_mode", true)
         switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", false)
-        
-        // V4: single source of truth — VaultManager se padho (default = true)
-        switchGhostVault.isChecked = VaultManager.isGhostVaultEnabled(this)
 
         // Listeners for Switches
         switchSuggestions.setOnCheckedChangeListener { _, isChecked ->
@@ -54,28 +49,6 @@ class SettingsActivity : AppCompatActivity() {
 
         switchIncognitoKill.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("incognito_kill", isChecked).apply()
-        }
-
-        // ============================================================
-        // V4 GHOST VAULT TOGGLE
-        // ON  → agar setup nahi hua to VaultSetupActivity kholo
-        // OFF → command clear + vault lock (next ON par fresh setup)
-        // ============================================================
-        switchGhostVault.setOnCheckedChangeListener { _, isChecked ->
-            VaultManager.setGhostVaultEnabled(this, isChecked)
-
-            if (isChecked) {
-                if (!VaultManager.isVaultSetupDone(this)) {
-                    startActivity(Intent(this, VaultSetupActivity::class.java))
-                }
-            } else {
-                // Vault OFF → setup reset karo taaki next ON pe naya command set ho
-                prefs.edit()
-                    .putBoolean("is_vault_setup_done", false)
-                    .remove("vault_command")
-                    .putBoolean("is_vault_unlocked", false)
-                    .apply()
-            }
         }
 
         // Clear Data Option
