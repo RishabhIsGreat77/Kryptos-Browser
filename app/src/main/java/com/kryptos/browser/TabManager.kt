@@ -5,12 +5,12 @@ object TabManager {
     var activeTabId: String? = null
 
     init {
-        // App start hote hi ek home tab banao
-        addNewTab("kryptos://home", "Home")
+        // Create a home tab on app start
+        addNewTab("kryptos://home", "Home", false)
     }
 
-    fun addNewTab(url: String, title: String): Tab {
-        val newTab = Tab(System.currentTimeMillis().toString(), title, url)
+    fun addNewTab(url: String, title: String, isIncognito: Boolean = false): Tab {
+        val newTab = Tab(System.currentTimeMillis().toString(), title, url, isIncognito)
         tabsList.add(newTab)
         activeTabId = newTab.id
         return newTab
@@ -19,10 +19,10 @@ object TabManager {
     fun removeTab(tab: Tab) {
         tabsList.remove(tab)
         if (tabsList.isEmpty()) {
-            // Agar sab tabs band ho gaye, toh naya home tab banao
-            addNewTab("kryptos://home", "Home")
+            // If all tabs are closed, create a new home tab
+            addNewTab("kryptos://home", "Home", false)
         } else if (activeTabId == tab.id) {
-            // Agar active tab band hua, toh last wale ko active karo
+            // If active tab was closed, set last tab as active
             activeTabId = tabsList.last().id
         }
     }
