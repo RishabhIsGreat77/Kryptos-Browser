@@ -3,6 +3,7 @@ package com.kryptos.browser
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -21,6 +22,7 @@ class TabsActivity : AppCompatActivity() {
     private lateinit var layoutIncognito: LinearLayout
     private lateinit var btnAddNormal: ImageButton
     private lateinit var btnAddIncognito: ImageButton
+    private lateinit var txtEmptyTabs: TextView
 
     private var isIncognitoMode = false
 
@@ -35,6 +37,7 @@ class TabsActivity : AppCompatActivity() {
         layoutIncognito = findViewById(R.id.layout_tab_incognito)
         btnAddNormal = findViewById(R.id.btn_add_normal_tab)
         btnAddIncognito = findViewById(R.id.btn_add_incognito_tab)
+        txtEmptyTabs = findViewById(R.id.txt_empty_tabs)
 
         recyclerView.layoutManager = GridLayoutManager(this, 2)
 
@@ -104,6 +107,16 @@ class TabsActivity : AppCompatActivity() {
 
     private fun updateTabList() {
         val filteredTabs = TabManager.tabsList.filter { it.isIncognito == isIncognitoMode }.toMutableList()
+        
+        // Handle Empty State
+        if (filteredTabs.isEmpty()) {
+            txtEmptyTabs.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+        } else {
+            txtEmptyTabs.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
+        }
+
         adapter.updateTabs(filteredTabs)
     }
     
