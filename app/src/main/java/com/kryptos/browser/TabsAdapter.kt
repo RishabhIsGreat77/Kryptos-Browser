@@ -6,12 +6,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-// 1. Tab Data Class (Har tab ki jankari rakhne ke liye)
+// 1. Tab Data Class (Added isIncognito flag)
 data class Tab(
     val id: String,
     var title: String,
     var url: String,
-    var isActive: Boolean = false
+    var isActive: Boolean = false,
+    var isIncognito: Boolean = false
 )
 
 // 2. TabsAdapter (Jo list ko grid me dikhayega)
