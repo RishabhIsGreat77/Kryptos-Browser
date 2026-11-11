@@ -2,9 +2,7 @@ package com.kryptos.browser
 
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -55,7 +53,7 @@ class TabsActivity : AppCompatActivity() {
             updateTabList()
         }
 
-        // New Tab (+) Button logic (Creates tab based on current mode)
+        // New Tab (+) Button logic
         findViewById<ImageButton>(R.id.btn_new_tab).setOnClickListener {
             val title = if (isIncognitoMode) "Incognito Tab" else "New Tab"
             val newTab = TabManager.addNewTab("kryptos://home", title, isIncognitoMode)
@@ -63,7 +61,7 @@ class TabsActivity : AppCompatActivity() {
             finish()
         }
 
-        // Dedicated Incognito Tab Button (Forces incognito mode)
+        // Dedicated Incognito Tab Button
         findViewById<ImageButton>(R.id.btn_new_incognito_tab).setOnClickListener {
             isIncognitoMode = true
             updateTabSelectorUI()
@@ -94,14 +92,6 @@ class TabsActivity : AppCompatActivity() {
     private fun updateTabList() {
         // Filter tabs based on current mode
         val filteredTabs = TabManager.tabsList.filter { it.isIncognito == isIncognitoMode }.toMutableList()
-        
-        // If no tabs in this mode, add a default one
-        if (filteredTabs.isEmpty()) {
-            val title = if (isIncognitoMode) "Incognito Tab" else "New Tab"
-            TabManager.addNewTab("kryptos://home", title, isIncognitoMode)
-            filteredTabs.add(TabManager.tabsList.last())
-        }
-        
         adapter.updateTabs(filteredTabs)
     }
     
