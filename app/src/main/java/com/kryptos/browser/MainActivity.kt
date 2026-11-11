@@ -303,7 +303,13 @@ class MainActivity : AppCompatActivity() {
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> { Toast.makeText(this, "Incognito Mode coming soon!", Toast.LENGTH_SHORT).show(); true }
+                    1 -> { 
+    val newTab = TabManager.addNewTab("kryptos://home", "Incognito Tab", true)
+    TabManager.setActiveTab(newTab.id)
+    showHomepageUI()
+    Toast.makeText(this, "Incognito Tab Opened", Toast.LENGTH_SHORT).show()
+    true 
+}
                     2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
                     5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
                     3 -> {
@@ -512,10 +518,21 @@ class MainActivity : AppCompatActivity() {
         CookieManager.getInstance().removeAllCookies(null)
         dbHelper.clearHistory()
 
+    // Clear all incognito tabs from memory
+        TabManager.tabsList.removeAll { it.isIncognito }
         finishAffinity()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
         }
+
+    // Force remove from recents
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+    
+    // Kill the process completely
+        android.os.Process.killProcess(android.os.Process.myPid())
+        System.exit(0)
+    }
 
         // Force remove from recents
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
@@ -576,16 +593,19 @@ class MainActivity : AppCompatActivity() {
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
             errorContainer?.visibility = View.GONE
         }
-
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             progressBar?.visibility = View.GONE
-
             if (url != "about:blank" && url != null) {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
-                dbHelper.addHistory(title, url)
-
+                
+                // CHECK IF INCOGNITO TAB
+                val activeTab = TabManager.getActiveTab()
+                if (activeTab?.isIncognito != true) {
+                    dbHelper.addHistory(title, url)
+                }
+                
                 if (bookmarkDb.isBookmarked(url)) {
                     btnBookmark?.setImageResource(R.drawable.ic_star_filled)
                 } else {
