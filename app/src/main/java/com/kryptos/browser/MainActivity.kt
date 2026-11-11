@@ -371,7 +371,7 @@ class MainActivity : AppCompatActivity() {
             bookmarkDb.clearBookmarks()
 
             TabManager.tabsList.clear()
-            TabManager.addNewTab("kryptos://home", "Home")
+            TabManager.addNewTab("kryptos://home", "Home", false)
             updateTabCountUI()
             showHomepageUI()
             renderSpeedDials()
@@ -410,7 +410,8 @@ class MainActivity : AppCompatActivity() {
                 addressBar?.setText("kryptos://home")
                 addressBar?.clearFocus()
 
-                showHomepageUI()
+                // Recreate activity to reload UI and flush old data
+                recreate()
                 return
             }
         }
@@ -557,6 +558,9 @@ class MainActivity : AppCompatActivity() {
         try {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
+
+        // AUTO-CLOSE INCOGNITO TABS WHEN APP IS CLOSED
+        TabManager.tabsList.removeAll { it.isIncognito }
 
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
