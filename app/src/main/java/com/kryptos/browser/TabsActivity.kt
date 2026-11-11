@@ -41,6 +41,9 @@ class TabsActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = GridLayoutManager(this, 2)
 
+        // Auto-detect mode based on currently active tab
+        isIncognitoMode = TabManager.getActiveTab()?.isIncognito ?: false
+
         adapter = TabsAdapter(mutableListOf(),
             onTabClick = { tab ->
                 TabManager.setActiveTab(tab.id)
@@ -108,7 +111,6 @@ class TabsActivity : AppCompatActivity() {
     private fun updateTabList() {
         val filteredTabs = TabManager.tabsList.filter { it.isIncognito == isIncognitoMode }.toMutableList()
         
-        // Handle Empty State
         if (filteredTabs.isEmpty()) {
             txtEmptyTabs.visibility = View.VISIBLE
             recyclerView.visibility = View.GONE
