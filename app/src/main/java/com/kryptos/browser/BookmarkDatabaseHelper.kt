@@ -5,20 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-/**
- * BookmarkDatabaseHelper — V4 Ghost Vault aware
- *
- * Default dbName = VaultManager.getBookmarkDbName(context)
- *   → LOCKED   → "KryptosBookmarks_decoy.db"
- *   → UNLOCKED → "KryptosBookmarks.db"
- *
- * Existing callers like `BookmarkDatabaseHelper(this)` mein
- * kuch change karne ki zaroorat NAHI hai. Vault state auto-pick hoga.
- */
-class BookmarkDatabaseHelper(
-    context: Context,
-    dbName: String = VaultManager.getBookmarkDbName(context)
-) : SQLiteOpenHelper(context, dbName, null, 1) {
+class BookmarkDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosBookmarks.db", null, 1) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE)")
