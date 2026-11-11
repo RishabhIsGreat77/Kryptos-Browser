@@ -24,13 +24,17 @@ class HistoryActivity : AppCompatActivity() {
         
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        loadHistory()
-
         findViewById<TextView>(R.id.btn_clear_all_history).setOnClickListener {
             dbHelper.clearHistory()
             loadHistory()
             Toast.makeText(this, "History Cleared", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    // Reload history when returning to this screen
+    override fun onResume() {
+        super.onResume()
+        loadHistory()
     }
 
     private fun loadHistory() {
@@ -44,7 +48,6 @@ class HistoryActivity : AppCompatActivity() {
             recyclerView.visibility = View.VISIBLE
             
             val adapter = HistoryAdapter(historyList) { item ->
-                // Click karne par MainActivity me wapas jao aur URL load karo
                 TabManager.addNewTab(item.url, item.title)
                 finish()
             }
