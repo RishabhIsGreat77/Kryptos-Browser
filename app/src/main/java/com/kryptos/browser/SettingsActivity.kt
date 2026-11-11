@@ -29,7 +29,6 @@ class SettingsActivity : AppCompatActivity() {
         val switchSuggestions = findViewById<Switch>(R.id.switch_suggestions)
         val switchDarkMode = findViewById<Switch>(R.id.switch_dark_mode)
         val switchIncognitoKill = findViewById<Switch>(R.id.switch_incognito_kill)
-        val switchPanicShake = findViewById<Switch>(R.id.switch_panic_shake)
         val switchGhostVault = findViewById<Switch>(R.id.switch_ghost_vault)
 
         val txtClearData = findViewById<TextView>(R.id.txt_clear_data_settings)
@@ -39,7 +38,7 @@ class SettingsActivity : AppCompatActivity() {
         switchSuggestions.isChecked = prefs.getBoolean("search_suggestions", true)
         switchDarkMode.isChecked = prefs.getBoolean("dark_mode", true)
         switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", false)
-        switchPanicShake.isChecked = prefs.getBoolean("panic_shake", false)
+        
         // V4: single source of truth — VaultManager se padho (default = true)
         switchGhostVault.isChecked = VaultManager.isGhostVaultEnabled(this)
 
@@ -55,10 +54,6 @@ class SettingsActivity : AppCompatActivity() {
 
         switchIncognitoKill.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("incognito_kill", isChecked).apply()
-        }
-
-        switchPanicShake.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("panic_shake", isChecked).apply()
         }
 
         // ============================================================
