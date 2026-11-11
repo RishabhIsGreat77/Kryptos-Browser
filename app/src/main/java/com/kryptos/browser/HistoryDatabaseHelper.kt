@@ -5,10 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class HistoryDatabaseHelper(
-    context: Context,
-    dbName: String = VaultManager.getHistoryDbName(context)
-) : SQLiteOpenHelper(context, dbName, null, 2) {
+class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "KryptosHistory.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         val createTable = "CREATE TABLE history (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, url TEXT UNIQUE, timestamp INTEGER, visit_count INTEGER)"
@@ -22,8 +19,6 @@ class HistoryDatabaseHelper(
 
     fun addHistory(title: String, url: String) {
         val db = this.writableDatabase
-
-        // Check karo pehle se kitni baar khula hai
         val cursor = db.rawQuery("SELECT visit_count FROM history WHERE url=?", arrayOf(url))
         var count = 1
         if (cursor.moveToFirst()) {
