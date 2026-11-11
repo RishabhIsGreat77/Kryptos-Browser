@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.view.View
 import android.view.Window
 import android.widget.ImageView
 import android.widget.TextView
@@ -16,6 +17,7 @@ class BookmarksActivity : AppCompatActivity() {
 
     private lateinit var db: BookmarkDatabaseHelper
     private lateinit var recycler: RecyclerView
+    private lateinit var txtEmpty: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,19 +25,34 @@ class BookmarksActivity : AppCompatActivity() {
 
         db = BookmarkDatabaseHelper(this)
         recycler = findViewById(R.id.bookmarks_recycler_view)
+        txtEmpty = findViewById(R.id.txt_empty_bookmarks)
         recycler.layoutManager = LinearLayoutManager(this)
 
-        // Trash Icon Listener (Needs to be added in activity_bookmarks.xml)
         val btnClear = findViewById<ImageView>(R.id.btn_clear_bookmarks)
         btnClear.setOnClickListener {
-            showClearBookmarksDialog()
+            if (db.getAllBookmarks().isNotEmpty()) {
+                showClearBookmarksDialog()
+            }
         }
+    }
 
+    // Important: Reload data when returning to this screen (fixes vault mixing)
+    override fun onResume() {
+        super.onResume()
         loadBookmarks()
     }
 
     private fun loadBookmarks() {
         val list = db.getAllBookmarks()
+        
+        if (list.isEmpty()) {
+            txtEmpty.visibility = View.VISIBLE
+            recycler.visibility = View.GONE
+        } else {
+            txtEmpty.visibility = View.GONE
+            recycler.visibility = View.VISIBLE
+        }
+
         recycler.adapter = BookmarkAdapter(list,
             onClick = { item ->
                 TabManager.addNewTab(item.url, item.title)
@@ -44,7 +61,7 @@ class BookmarksActivity : AppCompatActivity() {
             onLongClick = { item ->
                 db.removeBookmark(item.url)
                 Toast.makeText(this, "Bookmark Removed", Toast.LENGTH_SHORT).show()
-                loadBookmarks() // Refresh list
+                loadBookmarks()
             }
         )
     }
@@ -63,14 +80,14 @@ class BookmarksActivity : AppCompatActivity() {
         title.text = "Clear Bookmarks"
         message.text = "Are you sure you want to remove all bookmarks?"
         btnConfirm.text = "Clear"
-        btnConfirm.setTextColor(Color.parseColor("#EF4444")) // Error Color
+        btnConfirm.setTextColor(Color.parseColor("#EF4444"))
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
             dialog.dismiss()
             db.clearBookmarks()
             Toast.makeText(this, "All bookmarks cleared!", Toast.LENGTH_SHORT).show()
-            loadBookmarks() // Refresh list
+            loadBookmarks()
         }
         dialog.show()
     }
