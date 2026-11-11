@@ -22,7 +22,6 @@
             android:textSize="22sp" 
             android:textStyle="bold" />
 
-        <!-- Clear All Trash Icon (Option B) -->
         <ImageView
             android:id="@+id/btn_clear_bookmarks"
             android:layout_width="48dp"
@@ -33,6 +32,18 @@
             app:tint="@color/kryptos_error"
             android:contentDescription="Clear all bookmarks" />
     </LinearLayout>
+
+    <!-- Empty State TextView -->
+    <TextView
+        android:id="@+id/txt_empty_bookmarks"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/bookmarks_top_bar"
+        android:text="No bookmarks yet"
+        android:textColor="@color/kryptos_text_secondary"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView 
         android:id="@+id/bookmarks_recycler_view" 
