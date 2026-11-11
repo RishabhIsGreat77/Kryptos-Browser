@@ -55,6 +55,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
 
+    // NEW: Dock Controller Variable
+    private lateinit var dockController: DockController
+
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
@@ -113,6 +116,15 @@ class MainActivity : AppCompatActivity() {
 
         renderSpeedDials()
         checkAndClearCache()
+
+        // NEW: Initialize Dock Controller
+        dockController = DockController(
+            this, 
+            bottomDock!!, 
+            findViewById(R.id.pill_container), 
+            findViewById(R.id.pill_view), 
+            webView
+        )
 
         // Register Screen Off Receiver
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
@@ -401,6 +413,10 @@ class MainActivity : AppCompatActivity() {
         bottomDock?.setBackgroundColor(Color.TRANSPARENT)
         bottomDock?.elevation = 0f
 
+        // NEW: Hide Dock and show Pill when loading a website
+        dockController.setHomePage(false)
+        dockController.hideDockAndShowPill()
+
         addressBar?.setText(url)
         webView.loadUrl(url)
     }
@@ -411,6 +427,9 @@ class MainActivity : AppCompatActivity() {
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
+        
+        // NEW: Show Dock Permanently on Home Screen
+        dockController.setHomePage(true)
 
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
         bottomDock?.elevation = 12f
@@ -491,7 +510,6 @@ class MainActivity : AppCompatActivity() {
         CookieManager.getInstance().removeAllCookies(null)
         dbHelper.clearHistory()
 
-        // Clear all incognito tabs from memory
         TabManager.tabsList.removeAll { it.isIncognito }
 
         finishAffinity()
@@ -499,11 +517,9 @@ class MainActivity : AppCompatActivity() {
             finishAndRemoveTask()
         }
 
-        // Force remove from recents
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         activityManager.appTasks.forEach { it.finishAndRemoveTask() }
         
-        // Kill the process completely
         android.os.Process.killProcess(android.os.Process.myPid())
         System.exit(0)
     }
@@ -531,7 +547,6 @@ class MainActivity : AppCompatActivity() {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
 
-        // AUTO-CLOSE INCOGNITO TABS WHEN APP IS CLOSED
         TabManager.tabsList.removeAll { it.isIncognito }
 
         if (this::webView.isInitialized) webView.destroy()
@@ -556,6 +571,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
+        
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
@@ -570,7 +586,6 @@ class MainActivity : AppCompatActivity() {
                 val title = view?.title ?: "New Tab"
                 TabManager.updateActiveTabTitle(title, url)
 
-                // CHECK IF INCOGNITO TAB - DO NOT SAVE HISTORY
                 val activeTab = TabManager.getActiveTab()
                 if (activeTab?.isIncognito != true) {
                     dbHelper.addHistory(title, url)
@@ -581,6 +596,9 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     btnBookmark?.setImageResource(R.drawable.ic_star_empty)
                 }
+
+                // NEW: Update Pill Color based on website background
+                dockController.updatePillColor()
             }
         }
 
