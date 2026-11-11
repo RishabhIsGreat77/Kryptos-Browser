@@ -102,37 +102,6 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <!-- Ghost Vault Toggle -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingVertical="12dp">
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ghost Vault"
-                    android:textColor="@color/kryptos_text_primary"
-                    android:textSize="16sp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hide history behind a secret kryptos:// command"
-                    android:textColor="@color/kryptos_text_secondary"
-                    android:textSize="12sp"/>
-            </LinearLayout>
-            <Switch
-                android:id="@+id/switch_ghost_vault"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
         <!-- Clear Data Option -->
         <TextView
             android:id="@+id/txt_clear_data_settings"
