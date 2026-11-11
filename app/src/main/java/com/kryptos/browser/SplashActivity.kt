@@ -21,16 +21,8 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        val isVaultSetupDone = prefs.getBoolean("is_vault_setup_done", false)
-        // Default to true for testing the feature, user can turn off in settings
-        val ghostVaultEnabled = prefs.getBoolean("ghost_vault", true) 
-
         Handler(Looper.getMainLooper()).postDelayed({
-            if (ghostVaultEnabled && !isVaultSetupDone) {
-                startActivity(Intent(this, VaultSetupActivity::class.java))
-            } else {
-                startActivity(Intent(this, MainActivity::class.java))
-            }
+            startActivity(Intent(this, MainActivity::class.java))
             finish()
         }, 1500)
     }
