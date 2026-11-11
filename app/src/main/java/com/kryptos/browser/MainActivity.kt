@@ -54,7 +54,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
-    private lateinit var panicSensorManager: PanicSensorManager
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -87,9 +86,6 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
         setContentView(R.layout.activity_main)
 
-        // V4 GHOST VAULT: DB helpers default mein VaultManager se DB naam lete hain.
-        // SplashActivity ne launch pe vault lock kar diya hai, isliye yahan
-        // DECOY DB ban rahi hai (ghost_vault ON hai to). Toggle pe re-init hoga.
         dbHelper = HistoryDatabaseHelper(this)
         bookmarkDb = BookmarkDatabaseHelper(this)
 
@@ -117,11 +113,6 @@ class MainActivity : AppCompatActivity() {
 
         renderSpeedDials()
         checkAndClearCache()
-
-        // Panic Sensor Setup
-        panicSensorManager = PanicSensorManager(this) {
-            executePanicProtocol()
-        }
 
         // Register Screen Off Receiver
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
@@ -295,7 +286,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_home)?.setOnClickListener { showHomepageUI() }
         findViewById<ImageButton>(R.id.btn_fire)?.setOnClickListener { showClearDataDialog() }
 
-
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
@@ -394,21 +384,16 @@ class MainActivity : AppCompatActivity() {
     private fun loadUrlOrSearch(input: String) {
         val inputLower = input.lowercase().trim()
 
-        // V4 GHOST VAULT: kryptos://[command] intercept
         if (inputLower.startsWith("kryptos://")) {
             val cmd = inputLower.removePrefix("kryptos://").trim()
 
-            // Sirf tab jab ghost_vault toggle ON ho aur command sahi ho
             if (VaultManager.isGhostVaultEnabled(this) && VaultManager.isCorrectCommand(this, cmd)) {
 
-                // Purane helper band karo
                 try { dbHelper.close() } catch (e: Exception) { }
                 try { bookmarkDb.close() } catch (e: Exception) { }
 
-                // State toggle (unlocked ↔ locked)
                 val unlocked = VaultManager.toggleVault(this)
 
-                // Naye DB naam ke saath helper re-init
                 dbHelper = HistoryDatabaseHelper(this, VaultManager.getHistoryDbName(this))
                 bookmarkDb = BookmarkDatabaseHelper(this, VaultManager.getBookmarkDbName(this))
 
@@ -419,15 +404,11 @@ class MainActivity : AppCompatActivity() {
                 addressBar?.setText("kryptos://home")
                 addressBar?.clearFocus()
 
-                // Re-render speed dial from new DB + go home
                 showHomepageUI()
                 return
             }
-            // Galat command ya ghost_vault OFF → normal search pe gira do
-            // (plausible deniability ke liye — error mat dikhao)
         }
 
-        // Normal URL / Search logic
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
@@ -522,33 +503,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // PANIC SHAKE & INCOGNITO PROTOCOLS
+    // INCOGNITO PROTOCOLS
     // ==========================================
-
-        private fun executePanicProtocol() {
-        webView.clearCache(true)
-        webView.clearHistory()
-
-        try {
-            // try to open calculator
-            val intent = Intent()
-            intent.action = Intent.ACTION_MAIN
-            intent.addCategory(Intent.CATEGORY_APP_CALCULATOR)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-        } catch (e: Exception) {
-            // open settings if calculator not found
-            val settingsIntent = Intent(android.provider.Settings.ACTION_SETTINGS)
-            settingsIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(settingsIntent)
-        }
-
-        // shut off browser and kill processes
-        finishAffinity()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask()
-        }
-    }
     private fun executeIncognitoKill() {
         webView.clearCache(true)
         webView.clearHistory()
@@ -561,6 +517,12 @@ class MainActivity : AppCompatActivity() {
             finishAndRemoveTask()
         }
 
+        // Force remove from recents
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+        
+        // Kill the process completely
+        android.os.Process.killProcess(android.os.Process.myPid())
         System.exit(0)
     }
 
@@ -579,17 +541,6 @@ class MainActivity : AppCompatActivity() {
             } else if (webView.url != activeTab.url) {
                 loadUrlOrSearch(activeTab.url)
             }
-        }
-
-        if (prefs.getBoolean("panic_shake", false)) {
-            panicSensorManager.startListening()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (::panicSensorManager.isInitialized) {
-            panicSensorManager.stopListening()
         }
     }
 
