@@ -81,7 +81,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // Check for Updates
         txtCheckUpdates.setOnClickListener {
-            showCustomToast("Checking for updates...")
+            showCustomToast("HEllo bro Kryptos ka auto updater kaam kar raha hai!")
             checkForUpdates()
         }
     }
