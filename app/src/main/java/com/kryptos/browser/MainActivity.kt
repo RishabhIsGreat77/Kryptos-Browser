@@ -518,6 +518,14 @@ class MainActivity : AppCompatActivity() {
                         recreate(); true
                     }
                     4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
+                    6 -> {
+                        toggleDesktopMode()
+                        true
+                    }
+                    7 -> {
+                        toggleForceDarkMode()
+                        true
+                    }
                     else -> false
                 }
             }
@@ -651,6 +659,36 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
+        
+        private fun toggleDesktopMode() {
+        isDesktopMode = !isDesktopMode
+        if (isDesktopMode) {
+            webView.settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+            Toast.makeText(this, "Desktop Site Enabled", Toast.LENGTH_SHORT).show()
+        } else {
+            webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+            Toast.makeText(this, "Mobile Site Enabled", Toast.LENGTH_SHORT).show()
+        }
+        webView.reload()
+    }
+
+    private fun toggleForceDarkMode() {
+        isForceDarkMode = !isForceDarkMode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            webView.settings.isAlgorithmicDarkeningAllowed = isForceDarkMode
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            webView.settings.forceDark = if (isForceDarkMode) android.webkit.WebSettings.FORCE_DARK_ON else android.webkit.WebSettings.FORCE_DARK_OFF
+        } else {
+            // For older devices, we can use a CSS hack, but let's keep it simple for now
+            Toast.makeText(this, "Force Dark Mode requires Android 10+", Toast.LENGTH_SHORT).show()
+            isForceDarkMode = !isForceDarkMode // revert
+            return
+        }
+        
+        val msg = if (isForceDarkMode) "Dark Mode Forced ON" else "Dark Mode Forced OFF"
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        webView.reload()
+    }
 
         webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             val request = DownloadManager.Request(Uri.parse(url))
