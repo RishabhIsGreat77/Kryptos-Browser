@@ -10,7 +10,14 @@ object TabManager {
     }
 
     fun addNewTab(url: String, title: String, isIncognito: Boolean = false): Tab {
-        val newTab = Tab(System.currentTimeMillis().toString(), title, url, isIncognito)
+        // FIXED: Used named parameters to prevent mixing up 'isActive' and 'isIncognito'
+        val newTab = Tab(
+            id = System.currentTimeMillis().toString(),
+            title = title,
+            url = url,
+            isActive = false,
+            isIncognito = isIncognito
+        )
         tabsList.add(newTab)
         activeTabId = newTab.id
         return newTab
