@@ -37,4 +37,5 @@ dependencies {
     implementation("androidx.webkit:webkit:1.11.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.webkit:webkit:1.10.0")
 }
