@@ -22,7 +22,7 @@
         android:label="Kryptos Browser"
         android:roundIcon="@drawable/app_icon"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Kryptos"
+        android:theme="@style/Theme.KryptosBrowser"
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
