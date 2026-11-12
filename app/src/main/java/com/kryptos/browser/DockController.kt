@@ -12,7 +12,6 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.webkit.WebView
-import androidx.core.content.ContextCompat
 
 class DockController(
     private val context: Context,
@@ -49,6 +48,7 @@ class DockController(
     private fun showDockImmediately() {
         isDockHidden = false
         bottomDock.visibility = View.VISIBLE
+        bottomDock.animate().cancel()
         bottomDock.translationY = 0f
         bottomDock.alpha = 1f
 
@@ -59,10 +59,11 @@ class DockController(
     fun hideDockAndShowPill() {
         if (isHomePage || isDockHidden) return
         isDockHidden = true
+        stopTimer()
 
         // Slide dock down and fade out
         bottomDock.animate()
-            .translationY(bottomDock.height.toFloat() + 150f)
+            .translationY(300f) // Move far down out of screen
             .alpha(0f)
             .setDuration(280)
             .setInterpolator(AccelerateInterpolator())
@@ -72,6 +73,7 @@ class DockController(
                     
                     // Show pill with jump animation
                     pillContainer.visibility = View.VISIBLE
+                    pillContainer.bringToFront() // Ensure it's drawn on top
                     pillContainer.animate()
                         .translationY(0f)
                         .setDuration(400)
@@ -154,12 +156,14 @@ class DockController(
             "})();"
         ) { colorStr ->
             try {
-                // colorStr example: "rgb(255, 255, 255)"
-                val rgb = colorStr.replace("rgba(", "").replace("rgb(", "").replace(")", "").split(",")
+                // Remove JSON quotes and parse RGB values
+                val cleanColor = colorStr.replace("\"", "")
+                val rgb = cleanColor.replace("rgba(", "").replace("rgb(", "").replace(")", "").split(",")
+                
                 if (rgb.size >= 3) {
-                    val r = rgb[0].trim().toFloat()
-                    val g = rgb[1].trim().toFloat()
-                    val b = rgb[2].trim().toFloat()
+                    val r = rgb[0].trim().toFloatOrNull() ?: 0f
+                    val g = rgb[1].trim().toFloatOrNull() ?: 0f
+                    val b = rgb[2].trim().toFloatOrNull() ?: 0f
                     
                     // Formula to calculate brightness
                     val brightness = (r * 299 + g * 587 + b * 114) / 1000
