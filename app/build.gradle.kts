@@ -11,8 +11,8 @@ android {
         applicationId = "com.kryptos.browser"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "3.2.0"
+        versionCode = 
+        versionName = "4.0.0"
     }
 
     buildTypes {
