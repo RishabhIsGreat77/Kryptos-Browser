@@ -138,9 +138,23 @@ class MainActivity : AppCompatActivity() {
     private fun updateTrackerUI() {
         txtTrackerCount?.text = String.format("%,d", trackerCount)
     }
-
+    
     private fun updateTabCountUI() {
-        txtTabCount?.text = TabManager.tabsList.size.toString()
+        val countTxt = findViewById<TextView>(R.id.txt_tab_count)
+        val incognitoIcon = findViewById<ImageView>(R.id.img_incognito_icon)
+        
+        val activeTab = TabManager.getActiveTab()
+
+        if (activeTab?.isIncognito == true) {
+            // Show Incognito Icon, Hide Number
+            countTxt.visibility = View.GONE
+            incognitoIcon.visibility = View.VISIBLE
+        } else {
+            // Show Number, Hide Icon
+            countTxt.visibility = View.VISIBLE
+            incognitoIcon.visibility = View.GONE
+            countTxt.text = TabManager.tabsList.size.toString()
+        }
     }
 
     // ==========================================
