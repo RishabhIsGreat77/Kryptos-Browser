@@ -14,6 +14,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.speech.RecognizerIntent
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.Window
@@ -33,6 +38,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.net.URLEncoder
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,13 +54,18 @@ class MainActivity : AppCompatActivity() {
     private var speedDialGrid: GridLayout? = null
     private var btnBookmark: ImageView? = null
 
+    // New: Suggestions Variables
+    private var suggestionsList: ListView? = null
+    private var suggestionsAdapter: ArrayAdapter<String>? = null
+    private val suggestionHandler = Handler(Looper.getMainLooper())
+    private var suggestionRunnable: Runnable? = null
+
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
     private var trackerCount = 0
 
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
-
     private lateinit var dockController: DockController
 
     private val searchEngines = listOf(
@@ -67,7 +78,6 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedEngineIndex = 0
     
-    // Screen Lock Receiver for Incognito Auto-Kill
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
@@ -100,7 +110,9 @@ class MainActivity : AppCompatActivity() {
         btnEngineSwitch = findViewById(R.id.btn_engine_switch)
         speedDialGrid = findViewById(R.id.speed_dial_grid)
         btnBookmark = findViewById(R.id.btn_bookmark)
+        suggestionsList = findViewById(R.id.suggestions_list)
 
+        setupSuggestions()
         updateTrackerUI()
         updateTabCountUI()
         setupWebView()
@@ -111,7 +123,6 @@ class MainActivity : AppCompatActivity() {
         renderSpeedDials()
         checkAndClearCache()
 
-        // Initialize Dock Controller
         dockController = DockController(
             this, 
             bottomDock!!, 
@@ -120,7 +131,6 @@ class MainActivity : AppCompatActivity() {
             webView
         )
 
-        // Register Screen Off Receiver
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -150,37 +160,117 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // SPEED DIAL LOGIC (Updated)
+    // SEARCH SUGGESTIONS & VOICE SEARCH LOGIC
+    // ==========================================
+    private fun setupSuggestions() {
+        suggestionsAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
+        suggestionsList?.adapter = suggestionsAdapter
+
+        suggestionsList?.setOnItemClickListener { _, _, position, _ ->
+            val query = suggestionsAdapter?.getItem(position)
+            if (query != null) {
+                addressBar?.setText(query)
+                hideSuggestions()
+                loadUrlOrSearch(query)
+            }
+        }
+
+        addressBar?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            
+            override fun afterTextChanged(s: Editable?) {
+                val query = s.toString().trim()
+                if (query.isEmpty() || query == "kryptos://home") {
+                    hideSuggestions()
+                    return
+                }
+                if (prefs.getBoolean("search_suggestions", true)) {
+                    fetchSuggestions(query)
+                }
+            }
+        })
+    }
+
+    private fun fetchSuggestions(query: String) {
+        suggestionRunnable?.let { suggestionHandler.removeCallbacks(it) }
+        suggestionRunnable = Runnable {
+            Thread {
+                try {
+                    val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                    val url = java.net.URL("https://suggestqueries.google.com/complete/search?client=firefox&q=$encodedQuery")
+                    val connection = url.openConnection() as java.net.HttpURLConnection
+                    connection.doInput = true
+                    connection.connect()
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    
+                    // Response is like: ["query", ["suggestion1", "suggestion2"]]
+                    val jsonArray = org.json.JSONArray(response)
+                    val suggestionsArray = jsonArray.getJSONArray(1)
+                    val suggestions = mutableListOf<String>()
+                    for (i in 0 until suggestionsArray.length()) {
+                        suggestions.add(suggestionsArray.getString(i))
+                    }
+                    
+                    runOnUiThread {
+                        if (suggestions.isNotEmpty()) {
+                            suggestionsAdapter?.clear()
+                            suggestionsAdapter?.addAll(suggestions)
+                            suggestionsAdapter?.notifyDataSetChanged()
+                            suggestionsList?.visibility = View.VISIBLE
+                        } else {
+                            hideSuggestions()
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread { hideSuggestions() }
+                }
+            }.start()
+        }
+        suggestionHandler.postDelayed(suggestionRunnable!!, 300) // 300ms debounce
+    }
+
+    private fun hideSuggestions() {
+        suggestionsList?.visibility = View.GONE
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
+            val results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!results.isNullOrEmpty()) {
+                val spokenText = results[0]
+                addressBar?.setText(spokenText)
+                loadUrlOrSearch(spokenText)
+            }
+        }
+    }
+
+    // ==========================================
+    // SPEED DIAL LOGIC
     // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
 
         val finalDials = mutableListOf<HistoryItem>()
 
-        // 1. Add Hardcoded Dials
         finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
         finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        // 2. Filter out searches and hardcoded sites
         val searchDomains = listOf("google.com", "bing.com", "duckduckgo.com", "search.brave.com", "yahoo.com", "ecosia.org")
         
         val dynamicDials = dbHelper.getMostVisitedSites(50).filter {
             val lowerUrl = it.url.lowercase()
             val isHardcoded = lowerUrl.contains("github.com") || lowerUrl.contains("reddit.com") || lowerUrl.contains("youtube.com")
-            
-            // Check if it's a search URL
             val isSearch = searchDomains.any { domain -> 
                 lowerUrl.contains(domain) && (lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search") || lowerUrl.contains("?p=")) 
             }
-            
             !isHardcoded && !isSearch
         }
 
-        // 3. Apply Limit (Max 8 total. We have 3, so add only 5 more)
         finalDials.addAll(dynamicDials.take(5))
 
-        // 4. Render to UI
         for (dial in finalDials) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
 
@@ -213,7 +303,6 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(dial.url)
             }
 
-            // NEW: Long Press to remove dynamic sites
             itemView.setOnLongClickListener {
                 val isHardcoded = dial.url.contains("github.com") || dial.url.contains("reddit.com") || dial.url.contains("youtube.com")
                 if (!isHardcoded) {
@@ -235,7 +324,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // NEW: Custom Popup for removing Speed Dial site
     private fun showRemoveSpeedDialDialog(dial: HistoryItem) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -250,14 +338,13 @@ class MainActivity : AppCompatActivity() {
         title.text = "Remove Site"
         message.text = "Do you want to remove ${dial.title} from Speed Dial?"
         btnConfirm.text = "Remove"
-        btnConfirm.setTextColor(Color.parseColor("#EF4444")) // Red color for delete
+        btnConfirm.setTextColor(Color.parseColor("#EF4444"))
 
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            // Delete from database so it never comes back in Speed Dial
             dbHelper.removeHistoryForUrl(dial.url) 
-            renderSpeedDials() // Refresh Grid
+            renderSpeedDials()
             Toast.makeText(this, "Removed from Speed Dial", Toast.LENGTH_SHORT).show()
         }
         dialog.show()
@@ -289,7 +376,6 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
     
-    // Link Defanger
     private fun defangUrl(url: String): String {
         if (!url.startsWith("http://") && !url.startsWith("https://")) return url
         try {
@@ -336,10 +422,23 @@ class MainActivity : AppCompatActivity() {
 
         addressBar?.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
+                hideSuggestions()
                 val input = addressBar?.text.toString().trim()
                 if (input.isNotEmpty()) loadUrlOrSearch(input)
                 true
             } else false
+        }
+
+        // Voice Search Logic
+        findViewById<ImageView>(R.id.btn_voice_search)?.setOnClickListener {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search...")
+            try {
+                startActivityForResult(intent, 100)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Voice search not supported on this device", Toast.LENGTH_SHORT).show()
+            }
         }
 
         btnEngineSwitch?.setOnClickListener { view ->
@@ -434,6 +533,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                if (suggestionsList?.visibility == View.VISIBLE) {
+                    hideSuggestions()
+                    return
+                }
                 if (homepageContainer?.visibility == View.VISIBLE) return
                 if (webView.canGoBack()) webView.goBack() else showHomepageUI()
             }
@@ -484,6 +587,7 @@ class MainActivity : AppCompatActivity() {
     // URL / SEARCH LOADER
     // ==========================================
     private fun loadUrlOrSearch(input: String) {
+        hideSuggestions()
         val url = if (input.contains(".") && !input.contains(" ")) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
@@ -506,6 +610,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHomepageUI() {
+        hideSuggestions()
         webView.loadUrl("about:blank")
         webView.clearHistory()
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
