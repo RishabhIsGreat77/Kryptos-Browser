@@ -77,6 +77,8 @@ class MainActivity : AppCompatActivity() {
         Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
     private var selectedEngineIndex = 0
+    private var isDesktopMode = false
+    private var isForceDarkMode = false
     
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -494,6 +496,8 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 5, 5, "Bookmarks")
             popup.menu.add(0, 3, 3, themeText)
             popup.menu.add(0, 4, 4, "Settings")
+            popup.menu.add(0, 6, 6, "Desktop Site")
+            popup.menu.add(0, 7, 7, "Force Dark Mode")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
