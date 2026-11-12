@@ -85,7 +85,7 @@ class SettingsActivity : AppCompatActivity() {
             checkForUpdates()
         }
     }
-
+    
     private fun checkForUpdates() {
         Thread {
             try {
@@ -99,10 +99,13 @@ class SettingsActivity : AppCompatActivity() {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     val json = org.json.JSONObject(response)
                     val latestVersion = json.getString("tag_name").replace("v", "").replace("-beta", "").trim()
-                    val currentVersion = "3.2.0" // Update this when new version is built
+                    
+                    // Dynamically get the current installed version
+                    val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                    val currentVersion = packageInfo.versionName ?: "1.0.0"
 
                     runOnUiThread {
-                        if (latestVersion > currentVersion) {
+                        if (isNewerVersion(latestVersion, currentVersion)) {
                             val assets = json.getJSONArray("assets")
                             if (assets.length() > 0) {
                                 var downloadUrl = ""
@@ -215,3 +218,17 @@ class SettingsActivity : AppCompatActivity() {
         dialog.show()
     }
 }
+    // Proper semantic version comparison (e.g., 4.0.1 > 3.2.0)
+    private fun isNewerVersion(latest: String, current: String): Boolean {
+        val latestParts = latest.split(".").map { it.toIntOrNull() ?: 0 }
+        val currentParts = current.split(".").map { it.toIntOrNull() ?: 0 }
+        
+        val maxLength = maxOf(latestParts.size, currentParts.size)
+        for (i in 0 until maxLength) {
+            val l = latestParts.getOrElse(i) { 0 }
+            val c = currentParts.getOrElse(i) { 0 }
+            if (l > c) return true
+            if (l < c) return false
+        }
+        return false
+    }
