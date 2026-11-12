@@ -246,6 +246,35 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) { }
         }.start()
     }
+    
+    // Link Defanger: Removes tracking parameters from URLs
+    private fun defangUrl(url: String): String {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return url
+        try {
+            val uri = Uri.parse(url)
+            val builder = uri.buildUpon()
+            builder.clearQuery() // Clears all existing query parameters
+
+            // List of common tracking parameters
+            val trackingParams = setOf(
+                "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+                "fbclid", "gclid", "mc_eid", "yclid", "igshid", "mkt_tok"
+            )
+
+            // Re-add only the safe parameters
+            for (param in uri.queryParameterNames) {
+                if (!trackingParams.contains(param.lowercase())) {
+                    val values = uri.getQueryParameters(param)
+                    for (value in values) {
+                        builder.appendQueryParameter(param, value)
+                    }
+                }
+            }
+            return builder.build().toString()
+        } catch (e: Exception) {
+            return url
+        }
+    }
 
     // ==========================================
     // TOOLBAR & MENU
@@ -333,6 +362,7 @@ class MainActivity : AppCompatActivity() {
                         val newTab = TabManager.addNewTab("kryptos://home", "Incognito Tab", true)
                         TabManager.setActiveTab(newTab.id)
                         showHomepageUI()
+                        updateTabCountUI()
                         Toast.makeText(this, "Incognito Tab Opened", Toast.LENGTH_SHORT).show()
                         true 
                     }
@@ -431,8 +461,10 @@ class MainActivity : AppCompatActivity() {
         dockController.setHomePage(false)
         dockController.hideDockAndShowPill()
 
-        addressBar?.setText(url)
-        webView.loadUrl(url)
+                // Apply Link Defanger before loading
+        val defangedUrl = defangUrl(url)
+        addressBar?.setText(defangedUrl)
+        webView.loadUrl(defangedUrl)
     }
 
     private fun showHomepageUI() {
@@ -583,9 +615,17 @@ class MainActivity : AppCompatActivity() {
             }
             return super.shouldInterceptRequest(view, request)
         }
-
-        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
         
+        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+            val url = request?.url.toString()
+            val defangedUrl = defangUrl(url)
+            
+            if (url != defangedUrl) {
+                view?.loadUrl(defangedUrl)
+                return true
+            }
+            return false
+        }
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
