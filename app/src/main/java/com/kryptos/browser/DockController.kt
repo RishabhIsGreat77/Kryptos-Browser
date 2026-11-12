@@ -33,7 +33,7 @@ class DockController(
             if (event.action == MotionEvent.ACTION_DOWN) {
                 resetAutoHideTimer()
             }
-            false // Let the click pass to the actual buttons
+            false 
         }
     }
 
@@ -61,54 +61,45 @@ class DockController(
         isDockHidden = true
         stopTimer()
 
-        // Slide dock down and fade out
         bottomDock.animate()
-            .translationY(300f) // Move far down out of screen
+            .translationY(300f)
             .alpha(0f)
             .setDuration(280)
             .setInterpolator(AccelerateInterpolator())
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    bottomDock.visibility = View.INVISIBLE
-                    
-                    // Show pill with jump animation
-                    pillContainer.visibility = View.VISIBLE
-                    pillContainer.bringToFront() // Ensure it's drawn on top
-                    pillContainer.animate()
-                        .translationY(0f)
-                        .setDuration(400)
-                        .setInterpolator(OvershootInterpolator())
-                        .start()
-                }
-            }).start()
+            .withEndAction {
+                bottomDock.visibility = View.INVISIBLE
+                
+                pillContainer.visibility = View.VISIBLE
+                pillContainer.bringToFront()
+                pillContainer.animate()
+                    .translationY(0f)
+                    .setDuration(400)
+                    .setInterpolator(OvershootInterpolator())
+                    .start()
+            }.start()
     }
 
     fun revealDockAndHidePill() {
         if (!isDockHidden) return
         isDockHidden = false
 
-        // Hide pill
         pillContainer.animate()
             .translationY(150f)
             .setDuration(200)
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    pillContainer.visibility = View.GONE
-                    
-                    // Reveal dock
-                    bottomDock.visibility = View.VISIBLE
-                    bottomDock.animate()
-                        .translationY(0f)
-                        .alpha(1f)
-                        .setDuration(280)
-                        .setInterpolator(DecelerateInterpolator())
-                        .setListener(null)
-                        .start()
-                    
-                    // Start timer
-                    resetAutoHideTimer()
-                }
-            }).start()
+            .withEndAction {
+                pillContainer.visibility = View.GONE
+                
+                bottomDock.visibility = View.VISIBLE
+                bottomDock.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(280)
+                    .setInterpolator(DecelerateInterpolator())
+                    .withEndAction {
+                        // Timer starts only after the dock fully animates up
+                        resetAutoHideTimer()
+                    }.start()
+            }.start()
     }
 
     fun resetAutoHideTimer() {
@@ -144,7 +135,6 @@ class DockController(
         }
     }
 
-    // Extract background color of the page to change pill color
     fun updatePillColor() {
         webView.evaluateJavascript(
             "(function() { " +
@@ -156,7 +146,6 @@ class DockController(
             "})();"
         ) { colorStr ->
             try {
-                // Remove JSON quotes and parse RGB values
                 val cleanColor = colorStr.replace("\"", "")
                 val rgb = cleanColor.replace("rgba(", "").replace("rgb(", "").replace(")", "").split(",")
                 
@@ -165,19 +154,15 @@ class DockController(
                     val g = rgb[1].trim().toFloatOrNull() ?: 0f
                     val b = rgb[2].trim().toFloatOrNull() ?: 0f
                     
-                    // Formula to calculate brightness
                     val brightness = (r * 299 + g * 587 + b * 114) / 1000
 
                     if (brightness > 128) {
-                        // Light background -> Use dark pill
                         pillView.setBackgroundResource(R.drawable.bg_pill_dark)
                     } else {
-                        // Dark background -> Use light pill
                         pillView.setBackgroundResource(R.drawable.bg_pill_light)
                     }
                 }
             } catch (e: Exception) {
-                // Default fallback
                 pillView.setBackgroundResource(R.drawable.bg_pill_light)
             }
         }
