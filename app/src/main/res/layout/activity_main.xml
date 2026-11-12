@@ -109,7 +109,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone">
-            <include layout="@layout/layout_error_page" />
+            <include layout="@layout/error_page" />
         </FrameLayout>
     </FrameLayout>
 
@@ -148,11 +148,13 @@
                 android:tint="@color/kryptos_primary" />
         </FrameLayout>
 
-        <!-- Tabs (Square Box with Number) -->
+        <!-- Tabs (Square Box with Number/Incognito Icon) -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent">
+            
+            <!-- Normal Tab Count -->
             <TextView
                 android:id="@+id/txt_tab_count"
                 android:layout_width="24dp"
@@ -163,6 +165,17 @@
                 android:gravity="center"
                 android:textSize="12sp"
                 android:textColor="@color/kryptos_text_primary" />
+                
+            <!-- NEW: Incognito Icon -->
+            <ImageView
+                android:id="@+id/img_incognito_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_incognito"
+                android:tint="@color/kryptos_text_primary"
+                android:visibility="gone" />
+
             <!-- Invisible click area for Tabs -->
             <View
                 android:id="@+id/btn_tabs"
@@ -178,7 +191,7 @@
 
     </LinearLayout>
 
-    <!-- NEW: GESTURE PILL CONTAINER (Auto-Hiding Dock Feature) -->
+    <!-- GESTURE PILL CONTAINER (Auto-Hiding Dock Feature) -->
     <FrameLayout
         android:id="@+id/pill_container"
         android:layout_width="140dp"
