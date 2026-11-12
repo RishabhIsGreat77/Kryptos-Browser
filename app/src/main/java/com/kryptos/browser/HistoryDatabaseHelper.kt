@@ -71,6 +71,13 @@ class HistoryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, "Krypt
         return list
     }
 
+    // NEW: Remove specific site from history (used for Speed Dial long-press)
+    fun removeHistoryForUrl(url: String) {
+        val db = this.writableDatabase
+        db.delete("history", "url=?", arrayOf(url))
+        db.close()
+    }
+
     fun clearHistory() {
         val db = this.writableDatabase
         db.execSQL("DELETE FROM history")
