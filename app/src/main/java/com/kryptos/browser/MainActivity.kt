@@ -67,12 +67,7 @@ class MainActivity : AppCompatActivity() {
         Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
     private var selectedEngineIndex = 0
-
-    private val blockedDomains = listOf(
-        "doubleclick.net", "google-analytics.com", "googletagmanager.com",
-        "facebook.com/tr", "scorecardresearch.com", "adservice.google.com"
-    )
-
+    
     // Screen Lock Receiver for Incognito Auto-Kill
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -603,9 +598,10 @@ class MainActivity : AppCompatActivity() {
     // WEBVIEW CLIENTS
     // ==========================================
     inner class KryptosWebViewClient : WebViewClient() {
+        
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
-            for (domain in blockedDomains) {
+            for (domain in TrackerList.blockedDomains) { // <-- यहाँ TrackerList लगा दिया है
                 if (url.contains(domain)) {
                     trackerCount++
                     prefs.edit().putInt("tracker_count", trackerCount).apply()
