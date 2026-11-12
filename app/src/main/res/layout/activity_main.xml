@@ -109,7 +109,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone">
-            <include layout="@layout/error_page" />
+            <!-- FIXED TYPO HERE -->
+            <include layout="@layout/layout_error_page" />
         </FrameLayout>
     </FrameLayout>
 
@@ -166,7 +167,7 @@
                 android:textSize="12sp"
                 android:textColor="@color/kryptos_text_primary" />
                 
-            <!-- NEW: Incognito Icon -->
+            <!-- Incognito Icon -->
             <ImageView
                 android:id="@+id/img_incognito_icon"
                 android:layout_width="28dp"
