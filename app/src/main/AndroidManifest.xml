@@ -49,6 +49,7 @@
         <activity android:name=".TabsActivity" android:exported="false" />
         <activity android:name=".HistoryActivity" android:exported="false" />
         <activity android:name=".BookmarksActivity" android:exported="false" />
+        <activity android:name=".DownloadsActivity" android:exported="false" />
 
         <!-- FileProvider for Auto-Updater (Required to install APK) -->
         <provider
