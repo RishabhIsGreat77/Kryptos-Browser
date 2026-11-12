@@ -1,52 +1,78 @@
-# Kryptos Browser
+<div align="center">
+  <img src="app/src/main/res/drawable/app_icon.png" width="120" alt="Kryptos Logo">
+  <h1>Kryptos Browser</h1>
+  <p><b>Next-Gen Privacy. Dark Sci-Fi UI. Unmatched Speed.</b></p>
+  
+  [![Version](https://img.shields.io/badge/Version-4.0.0-00E676?style=for-the-badge)]()
+  [![Android](https://img.shields.io/badge/Android-8.0%2B-141418?style=for-the-badge&logo=android)](https://developer.android.com)
+  [![Kotlin](https://img.shields.io/badge/Kotlin-100%25-00E676?style=for-the-badge&logo=kotlin)](https://kotlinlang.org)
+</div>
 
-A lightweight, ultra-minimal, and privacy-conscious Android web browser. Built with a premium Hacker/Sci-Fi aesthetic and native Android WebView.
+<br>
 
-## Features (V3.2.0)
+**Kryptos** ek high-performance, privacy-focused Android browser hai jo ek deep matte black aur neon green dark sci-fi theme ke saath design kiya gaya hai. Isse maine (Rishabh) completely mobile se build kiya hai using GitHub Actions.
 
-- **Premium Green Theme:** Deep matte dark theme (#0B0B0D) with vibrant neon green accents and a smooth ambient glow behind the fingerprint logo.
-- **Smart Auto Speed Dial:** Your most frequently visited websites are automatically added to the home screen. No manual saving required!
-- **Real-time Tracker Blocker:** Live counter showing how many trackers and ads have been blocked.
-- **History & Bookmarks:** Fully functional, local SQLite databases to manage your browsing data securely.
-- **Download Manager:** Seamlessly download files using Android's native Download Manager.
-- **Smart Tabs System:** Open multiple tabs with a dynamic tab counter. 
-- **Auto Cache Cleaner:** The app automatically clears its cache when it exceeds 100MB to save phone storage.
-- **Custom Dark Popups:** All menus and dialogs (including engine selectors) are styled to match the dark theme perfectly.
-- **Google CAPTCHA Fix:** Updated User-Agent ensures smoother, CAPTCHA-free Google searches.
-- **Auto-Updater:** Check for new updates manually via Settings and update the app seamlessly without losing your data.
+---
 
-## Installation (For Users)
+## 🚀 V4 Me Kya Naya Hai? (What's New in V4)
 
-You do not need any development tools to use Kryptos Browser.
+V4 ek bahut bada update hai jisme privacy aur UI ko completely next level pe le jaya gaya hai:
 
-1. Go to the [Releases](../../releases) page.
-2. Download the latest `Kryptos-Browser-vX.Y.Z.apk` file.
-3. Open the APK on your Android device.
-4. If prompted, allow your browser or file manager to "Install unknown apps".
-5. Install and open Kryptos Browser.
+*   🕵️ **Incognito Mode (Fully Functional):** Ab normal tabs aur incognito tabs completely alag hain. Incognito me ek custom hat/glasses icon dikhta hai aur app band hone pe saare incognito tabs auto-kill ho jaate hain.
+*   🎭 **Auto-Hiding Dock & Pill Bar:** YouTube jaise websites pe dock controls ko overlap hone se bachane ke liye ek iOS-style auto-hiding dock lagaya gaya hai. Website khulte hi dock chhup jaata hai aur ek swipable pill bar aata hai.
+*   🛡️ **Advanced Ad-Blocker (500+ Trackers):** Ek massive hosts list integrate ki gayi hai jo 500+ known trackers, ad networks aur analytics domains ko block karti hai.
+*   ✂️ **Link Defanger:** Automatically URLs se `utm_*`, `fbclid`, aur baaki tracking parameters ko strip kar deta hai.
+*   🗑️ **Smart UI Updates:** Empty states (No history yet, No bookmarks yet) aur Bookmarks me 'Clear All' trash icon add kiya gaya hai.
+*   ❌ **Removed:** Panic Shake aur Ghost Vault (V3 ke kuch features) ko completely hata diya gaya hai taaki app lightweight aur clean rahe.
 
-**Important Note for V3 Users:**
-If you are upgrading from a version older than V3.1.0, you must uninstall the old app before installing this version. This is because the app's digital signature was updated to support the new Auto-Updater. After this, future updates will overwrite seamlessly.
+---
 
-## Building from Source (For Developers)
+## ✨ Core Features
 
-The build process is fully automated via GitHub Actions. When code is pushed to the `main` branch, a workflow runs and generates a debug APK.
+*   **Dark Sci-Fi UI:** Deep matte black (#0B0B0D) aur Neon Green (#00E676) accents.
+*   **Floating Dock:** Custom glowing fire button, tabs counter, aur back/home controls.
+*   **Speed Dial:** Automatically fetches your top 5 most visited sites from SQLite database with grayscale favicons.
+*   **Auto Cache Cleaner:** Background thread automatically clears cache if it exceeds 100MB.
+*   **Custom WebView:** Spoofs a Pixel 8 user agent to fix CAPTCHA issues and load desktop-grade mobile sites.
+*   **Incognito Auto-Kill:** Option to kill the app and clear data instantly when the screen turns off.
+*   **Built-in Updater:** Settings me jaakar directly GitHub releases se update check kar sakte hain.
 
-If you want to build locally:
-1. Install JDK 17.
-2. Clone this repository.
-3. Run `./gradlew assembleDebug` (or `gradle assembleDebug`).
-4. The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Language:** Kotlin
-- **Engine:** Android WebView
-- **UI:** Native Android XML (ConstraintLayout, Custom Drawables)
-- **Database:** SQLite (for History & Bookmarks)
-- **Auto-Updater:** Custom GitHub API integration
-- **Build System:** Gradle + GitHub Actions
+*   **Language:** Kotlin
+*   **UI:** Native Android XML (ConstraintLayout, LinearLayout, GridLayout)
+*   **Database:** SQLite (SQLiteOpenHelper)
+*   **Preferences:** SharedPreferences
+*   **Build System:** GitHub Actions (JDK 17, Gradle 8.7)
+*   **Min SDK:** 26 (Android 8.0)
+*   **Target SDK:** 34 (Android 14)
 
-## Disclaimer
+---
 
-This is a Beta release. Features like Incognito Mode and Hardware Panic Shake are currently under development and will be added in future updates (V4).
+## 📂 Architecture Overview
+
+*   `MainActivity.kt`: Core WebView, Toolbar, Auto-Hiding Dock, Tracker Interception.
+*   `DockController.kt`: Handles all animations for the floating dock and pill bar.
+*   `TrackerList.kt`: 500+ blacklisted domains for the ad-blocker.
+*   `TabManager.kt`: Manages normal and incognito tabs memory.
+*   `HistoryDatabaseHelper.kt` & `BookmarkDatabaseHelper.kt`: Manages local SQLite databases.
+*   `LinkDefanger.kt` (Logic inside MainActivity): Cleans URLs before loading.
+
+---
+
+## ⚙️ How to Build
+
+Ye project completely cloud-based workflow pe chalta hai. Koi PC required nahi hai.
+
+1. Code edit karo seedha GitHub Web UI se.
+2. `main` branch pe commit karo.
+3. GitHub Actions automatically trigger hoga aur `Kryptos-Debug.apk` generate kar dega.
+
+---
+
+## 👨‍💻 Developer
+
+**Rishabh**
+*Built with passion, purely from an Android Phone.* 📱
