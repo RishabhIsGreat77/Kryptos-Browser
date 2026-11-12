@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
 
-    // NEW: Dock Controller Variable
     private lateinit var dockController: DockController
 
     private val searchEngines = listOf(
@@ -112,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         renderSpeedDials()
         checkAndClearCache()
 
-        // NEW: Initialize Dock Controller
+        // Initialize Dock Controller
         dockController = DockController(
             this, 
             bottomDock!!, 
@@ -141,11 +140,9 @@ class MainActivity : AppCompatActivity() {
         val activeTab = TabManager.getActiveTab()
 
         if (activeTab?.isIncognito == true) {
-            // Show Incognito Icon, Hide Number
             countTxt.visibility = View.GONE
             incognitoIcon.visibility = View.VISIBLE
         } else {
-            // Show Number, Hide Icon
             countTxt.visibility = View.VISIBLE
             incognitoIcon.visibility = View.GONE
             countTxt.text = TabManager.tabsList.size.toString()
@@ -153,26 +150,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // SPEED DIAL LOGIC
+    // SPEED DIAL LOGIC (Updated)
     // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
 
         val finalDials = mutableListOf<HistoryItem>()
 
+        // 1. Add Hardcoded Dials
         finalDials.add(HistoryItem("GitHub", "https://github.com", 0L))
         finalDials.add(HistoryItem("Reddit", "https://reddit.com", 0L))
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
-        val dynamicDials = dbHelper.getMostVisitedSites(10).filter {
+        // 2. Filter out searches and hardcoded sites
+        val searchDomains = listOf("google.com", "bing.com", "duckduckgo.com", "search.brave.com", "yahoo.com", "ecosia.org")
+        
+        val dynamicDials = dbHelper.getMostVisitedSites(50).filter {
             val lowerUrl = it.url.lowercase()
-            !lowerUrl.contains("github.com") &&
-            !lowerUrl.contains("reddit.com") &&
-            !lowerUrl.contains("youtube.com")
+            val isHardcoded = lowerUrl.contains("github.com") || lowerUrl.contains("reddit.com") || lowerUrl.contains("youtube.com")
+            
+            // Check if it's a search URL
+            val isSearch = searchDomains.any { domain -> 
+                lowerUrl.contains(domain) && (lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search") || lowerUrl.contains("?p=")) 
+            }
+            
+            !isHardcoded && !isSearch
         }
 
+        // 3. Apply Limit (Max 8 total. We have 3, so add only 5 more)
         finalDials.addAll(dynamicDials.take(5))
 
+        // 4. Render to UI
         for (dial in finalDials) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_speed_dial, speedDialGrid, false)
 
@@ -205,6 +213,17 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(dial.url)
             }
 
+            // NEW: Long Press to remove dynamic sites
+            itemView.setOnLongClickListener {
+                val isHardcoded = dial.url.contains("github.com") || dial.url.contains("reddit.com") || dial.url.contains("youtube.com")
+                if (!isHardcoded) {
+                    showRemoveSpeedDialDialog(dial)
+                } else {
+                    Toast.makeText(this, "Cannot remove default sites", Toast.LENGTH_SHORT).show()
+                }
+                true
+            }
+
             val params = GridLayout.LayoutParams()
             params.width = 0
             params.height = GridLayout.LayoutParams.WRAP_CONTENT
@@ -214,6 +233,34 @@ class MainActivity : AppCompatActivity() {
 
             speedDialGrid?.addView(itemView)
         }
+    }
+
+    // NEW: Custom Popup for removing Speed Dial site
+    private fun showRemoveSpeedDialDialog(dial: HistoryItem) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_custom)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val message = dialog.findViewById<TextView>(R.id.dialog_message)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btn_dialog_cancel)
+        val btnConfirm = dialog.findViewById<TextView>(R.id.btn_dialog_confirm)
+
+        title.text = "Remove Site"
+        message.text = "Do you want to remove ${dial.title} from Speed Dial?"
+        btnConfirm.text = "Remove"
+        btnConfirm.setTextColor(Color.parseColor("#EF4444")) // Red color for delete
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            // Delete from database so it never comes back in Speed Dial
+            dbHelper.removeHistoryForUrl(dial.url) 
+            renderSpeedDials() // Refresh Grid
+            Toast.makeText(this, "Removed from Speed Dial", Toast.LENGTH_SHORT).show()
+        }
+        dialog.show()
     }
 
     private fun loadGrayscaleFavicon(url: String, imageView: ImageView, textView: TextView) {
@@ -242,21 +289,19 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
     
-    // Link Defanger: Removes tracking parameters from URLs
+    // Link Defanger
     private fun defangUrl(url: String): String {
         if (!url.startsWith("http://") && !url.startsWith("https://")) return url
         try {
             val uri = Uri.parse(url)
             val builder = uri.buildUpon()
-            builder.clearQuery() // Clears all existing query parameters
+            builder.clearQuery()
 
-            // List of common tracking parameters
             val trackingParams = setOf(
                 "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
                 "fbclid", "gclid", "mc_eid", "yclid", "igshid", "mkt_tok"
             )
 
-            // Re-add only the safe parameters
             for (param in uri.queryParameterNames) {
                 if (!trackingParams.contains(param.lowercase())) {
                     val values = uri.getQueryParameters(param)
@@ -452,11 +497,9 @@ class MainActivity : AppCompatActivity() {
         bottomDock?.setBackgroundColor(Color.TRANSPARENT)
         bottomDock?.elevation = 0f
 
-        // NEW: Hide Dock and show Pill when loading a website
         dockController.setHomePage(false)
         dockController.hideDockAndShowPill()
 
-                // Apply Link Defanger before loading
         val defangedUrl = defangUrl(url)
         addressBar?.setText(defangedUrl)
         webView.loadUrl(defangedUrl)
@@ -469,7 +512,6 @@ class MainActivity : AppCompatActivity() {
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
         
-        // NEW: Show Dock Permanently on Home Screen
         dockController.setHomePage(true)
 
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
@@ -601,7 +643,7 @@ class MainActivity : AppCompatActivity() {
         
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
-            for (domain in TrackerList.blockedDomains) { // <-- यहाँ TrackerList लगा दिया है
+            for (domain in TrackerList.blockedDomains) {
                 if (url.contains(domain)) {
                     trackerCount++
                     prefs.edit().putInt("tracker_count", trackerCount).apply()
@@ -647,7 +689,6 @@ class MainActivity : AppCompatActivity() {
                     btnBookmark?.setImageResource(R.drawable.ic_star_empty)
                 }
 
-                // NEW: Update Pill Color based on website background
                 dockController.updatePillColor()
             }
         }
