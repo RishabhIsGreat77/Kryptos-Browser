@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: HistoryDatabaseHelper
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
+    private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
 
     // Fullscreen & Immersive Variables
@@ -101,6 +102,7 @@ class MainActivity : AppCompatActivity() {
 
         dbHelper = HistoryDatabaseHelper(this)
         bookmarkDb = BookmarkDatabaseHelper(this)
+        downloadDb = DownloadDatabaseHelper(this)
 
         selectedEngineIndex = prefs.getInt("default_search_engine", 0)
         trackerCount = prefs.getInt("tracker_count", 0)
@@ -504,6 +506,7 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 7, 7, "Force Dark Mode")
+            popup.menu.add(0, 8, 8, "Downloads")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -532,6 +535,7 @@ class MainActivity : AppCompatActivity() {
                         toggleForceDarkMode()
                         true
                     }
+                    8 -> { startActivity(Intent(this, DownloadsActivity::class.java)); true }
                     else -> false
                 }
             }
@@ -673,18 +677,25 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
 
-        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
             request.addRequestHeader("User-Agent", userAgent)
-            request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType))
+            request.setTitle(fileName)
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimeType))
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+            
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
+            
+            // Save to our custom Download Database
+            val fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + fileName
+            downloadDb.addDownload(fileName, url, fullPath)
+            
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
-    }
+    
 
     private fun checkAndClearCache() {
         Thread {
