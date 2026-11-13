@@ -26,13 +26,18 @@ class SplashActivity : AppCompatActivity() {
         // Wipe data if Incognito Auto-Kill was triggered
         if (prefs.getBoolean("wipe_on_next_launch", false)) {
             try {
+                // Clear Cookies
                 val cookieManager = CookieManager.getInstance()
                 cookieManager.removeAllCookies { cookieManager.flush() }
+                
+                // Clear LocalStorage & WebStorage
                 WebStorage.getInstance().deleteAllData()
                 
+                // Clear History DB
                 val dbHelper = HistoryDatabaseHelper(this)
                 dbHelper.clearHistory()
                 
+                // Clear Incognito Tabs
                 TabManager.tabsList.removeAll { it.isIncognito }
                 
                 // Reset the flag
