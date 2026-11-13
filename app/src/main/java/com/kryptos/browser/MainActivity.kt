@@ -1,19 +1,14 @@
 package com.kryptos.browser
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.Manifest
-import android.content.pm.PackageManager
-import android.speech.RecognitionListener
-import android.speech.SpeechRecognizer
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import java.util.Locale
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -23,7 +18,9 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -44,9 +41,12 @@ import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URLEncoder
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
+
+    // Voice Search Variables
     private var speechRecognizer: SpeechRecognizer? = null
     private var voiceSearchDialog: Dialog? = null
 
@@ -436,6 +438,7 @@ class MainActivity : AppCompatActivity() {
                 true
             } else false
         }
+
         findViewById<ImageView>(R.id.btn_voice_search)?.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
@@ -486,6 +489,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
+
         findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             val isDark = prefs.getBoolean("dark_mode", true)
@@ -494,6 +498,7 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 1, 1, "Incognito Mode")
             popup.menu.add(0, 2, 2, "History")
             popup.menu.add(0, 5, 5, "Bookmarks")
+            popup.menu.add(0, 3, 3, themeText)
             popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 8, 8, "Downloads")
@@ -501,7 +506,6 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { 
-                        // Backup Normal data if this is the first Incognito tab
                         if (TabManager.tabsList.none { it.isIncognito }) {
                             backupNormalCookies()
                             clearAllCookies()
@@ -515,6 +519,12 @@ class MainActivity : AppCompatActivity() {
                     }
                     2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
                     5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
+                    3 -> {
+                        val newMode = !isDark
+                        prefs.edit().putBoolean("dark_mode", newMode).apply()
+                        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
+                        recreate(); true
+                    }
                     4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
                     6 -> {
                         toggleDesktopMode()
@@ -668,20 +678,19 @@ class MainActivity : AppCompatActivity() {
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
             
-            // Save to our custom Download Database
             val fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + fileName
             downloadDb.addDownload(fileName, url, fullPath)
             
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
-    }
-    // Apply Force Dark Mode from Settings
-    val isDarkForced = prefs.getBoolean("force_dark_mode", false)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        settings.isAlgorithmicDarkeningAllowed = isDarkForced
+
+        val isDarkForced = prefs.getBoolean("force_dark_mode", false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            settings.isAlgorithmicDarkeningAllowed = isDarkForced
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settings.forceDark = if (isDarkForced) android.webkit.WebSettings.FORCE_DARK_ON else android.webkit.WebSettings.FORCE_DARK_OFF
         }
+    }
 
     private fun checkAndClearCache() {
         Thread {
@@ -718,36 +727,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
             Toast.makeText(this, "Mobile Site Enabled", Toast.LENGTH_SHORT).show()
-        }
-        webView.reload()
-    }
-
-    private fun toggleForceDarkMode() {
-        val isDarkForced = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            webView.settings.isAlgorithmicDarkeningAllowed
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            webView.settings.forceDark == android.webkit.WebSettings.FORCE_DARK_ON
-        } else {
-            false
-        }
-
-        if (!isDarkForced) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                webView.settings.isAlgorithmicDarkeningAllowed = true
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                webView.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_ON
-            } else {
-                Toast.makeText(this, "Force Dark Mode requires Android 10+", Toast.LENGTH_SHORT).show()
-                return
-            }
-            Toast.makeText(this, "Force Dark Mode ON", Toast.LENGTH_SHORT).show()
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                webView.settings.isAlgorithmicDarkeningAllowed = false
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                webView.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_OFF
-            }
-            Toast.makeText(this, "Force Dark Mode OFF", Toast.LENGTH_SHORT).show()
         }
         webView.reload()
     }
@@ -793,43 +772,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // INCOGNITO & COOKIE BACKUP PROTOCOLS
+    // CUSTOM VOICE SEARCH
     // ==========================================
-    private fun backupNormalCookies() {
-        normalCookiesBackup.clear()
-        val cookieManager = CookieManager.getInstance()
-        
-        for (tab in TabManager.tabsList.filter { !it.isIncognito }) {
-            val cookie = cookieManager.getCookie(tab.url)
-            if (cookie != null) normalCookiesBackup[tab.url] = cookie
-        }
-        
-        val commonSites = listOf("https://www.youtube.com", "https://github.com", "https://www.reddit.com", "https://www.google.com")
-        for (site in commonSites) {
-            val cookie = cookieManager.getCookie(site)
-            if (cookie != null) normalCookiesBackup[site] = cookie
-        }
-    }
-
-    private fun clearAllCookies() {
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.removeAllCookies {
-            cookieManager.flush()
-        }
-        WebStorage.getInstance().deleteAllData()
-    }
-
-    private fun restoreNormalCookies() {
-        val cookieManager = CookieManager.getInstance()
-        for ((url, cookie) in normalCookiesBackup) {
-            cookieManager.setCookie(url, cookie)
-        }
-        cookieManager.flush()
-    }
-
-        // Custom Voice Search Logic
     private fun startCustomVoiceSearch() {
-        // Show Custom Dialog
         voiceSearchDialog = Dialog(this)
         voiceSearchDialog?.requestWindowFeature(Window.FEATURE_NO_TITLE)
         voiceSearchDialog?.setContentView(R.layout.dialog_voice_search)
@@ -840,7 +785,6 @@ class MainActivity : AppCompatActivity() {
         val txtStatus = voiceSearchDialog?.findViewById<TextView>(R.id.txt_listening_status)
         val btnCancel = voiceSearchDialog?.findViewById<TextView>(R.id.btn_cancel_voice)
 
-        // Blinking animation for mic
         val animator = android.animation.ObjectAnimator.ofFloat(imgMic, "alpha", 1f, 0.3f, 1f)
         animator.duration = 1000
         animator.repeatCount = android.animation.ObjectAnimator.INFINITE
@@ -854,7 +798,6 @@ class MainActivity : AppCompatActivity() {
 
         voiceSearchDialog?.show()
 
-        // Initialize SpeechRecognizer
         if (speechRecognizer == null) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         }
@@ -892,7 +835,6 @@ class MainActivity : AppCompatActivity() {
         speechRecognizer?.startListening(intent)
     }
 
-    // Handle Permission Result
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 101) {
@@ -902,6 +844,41 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    // ==========================================
+    // INCOGNITO & COOKIE BACKUP
+    // ==========================================
+    private fun backupNormalCookies() {
+        normalCookiesBackup.clear()
+        val cookieManager = CookieManager.getInstance()
+        
+        for (tab in TabManager.tabsList.filter { !it.isIncognito }) {
+            val cookie = cookieManager.getCookie(tab.url)
+            if (cookie != null) normalCookiesBackup[tab.url] = cookie
+        }
+        
+        val commonSites = listOf("https://www.youtube.com", "https://github.com", "https://www.reddit.com", "https://www.google.com")
+        for (site in commonSites) {
+            val cookie = cookieManager.getCookie(site)
+            if (cookie != null) normalCookiesBackup[site] = cookie
+        }
+    }
+
+    private fun clearAllCookies() {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies {
+            cookieManager.flush()
+        }
+        WebStorage.getInstance().deleteAllData()
+    }
+
+    private fun restoreNormalCookies() {
+        val cookieManager = CookieManager.getInstance()
+        for ((url, cookie) in normalCookiesBackup) {
+            cookieManager.setCookie(url, cookie)
+        }
+        cookieManager.flush()
     }
 
     private fun executeIncognitoKill() {
@@ -935,29 +912,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ==========================================
+    // LIFECYCLE METHODS
+    // ==========================================
     override fun onResume() {
         super.onResume()
         
-        // Check if we need to backup Normal tabs data before entering Incognito
         if (prefs.getBoolean("backup_normal_data", false)) {
             backupNormalCookies()
             clearAllCookies()
             prefs.edit().putBoolean("backup_normal_data", false).apply()
         }
 
-        // Check if we need to wipe Incognito and restore Normal tabs data
         if (prefs.getBoolean("wipe_incognito_data", false)) {
             clearAllCookies()
             restoreNormalCookies()
             prefs.edit().putBoolean("wipe_incognito_data", false).apply()
             
-            // Reload active tab to apply restored cookies
             val currentTab = TabManager.getActiveTab()
             if (currentTab?.url == "kryptos://home") {
                 showHomepageUI()
             } else if (currentTab != null) {
                 loadUrlOrSearch(currentTab.url)
             }
+        }
+
+        val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
+        if (isFullscreenEnabled && !isImmersiveMode) {
+            hideUIForFullscreen()
+        } else if (!isFullscreenEnabled && isImmersiveMode) {
+            showUIBackFromFullscreen()
         }
         
         updateTabCountUI()
@@ -972,23 +956,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    // Apply Fullscreen mode from Settings
-    val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
-    if (isFullscreenEnabled && !isImmersiveMode) {
-            hideUIForFullscreen()
-        } else if (!isFullscreenEnabled && isImmersiveMode) {
-            showUIBackFromFullscreen()
-        }
+
     override fun onDestroy() {
         try {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
 
         TabManager.tabsList.removeAll { it.isIncognito }
+        speechRecognizer?.destroy()
 
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
-        speechRecognizer?.destroy()
     }
 
     // ==========================================
