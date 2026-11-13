@@ -210,10 +210,6 @@
                 android:focusable="true"
                 android:background="?attr/selectableItemBackgroundBorderless" />
         </FrameLayout>
-
-                <!-- NEW: Fullscreen Button -->
-        <ImageButton android:id="@+id/btn_fullscreen" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@android:drawable/ic_menu_view" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
-
         <!-- Menu -->
         <ImageButton android:id="@+id/btn_menu" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@drawable/ic_menu" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
 
