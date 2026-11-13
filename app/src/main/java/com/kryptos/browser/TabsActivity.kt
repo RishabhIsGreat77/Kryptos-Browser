@@ -1,5 +1,6 @@
 package com.kryptos.browser
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -41,7 +42,8 @@ class TabsActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = GridLayoutManager(this, 2)
 
-        // Auto-detect mode based on currently active tab
+        isIncognitoMode = TabManager.getActiveTab()?.isIncognito ?: false
+
         adapter = TabsAdapter(mutableListOf(),
             onTabClick = { tab ->
                 TabManager.setActiveTab(tab.id)
@@ -49,13 +51,14 @@ class TabsActivity : AppCompatActivity() {
             },
             onTabClose = { tab ->
                 TabManager.removeTab(tab)
-                // Agar last incognito tab close hua hai, toh data wipe aur restore karo
+                // Agar last incognito tab close hua hai, toh data wipe ka flag set karo
                 if (tab.isIncognito && TabManager.tabsList.none { it.isIncognito }) {
                     val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
                     prefs.edit().putBoolean("wipe_incognito_data", true).apply()
                 }
                 updateTabList()
             }
+        )
         recyclerView.adapter = adapter
 
         // Tab mode switch listeners
@@ -80,6 +83,11 @@ class TabsActivity : AppCompatActivity() {
 
         // Incognito Tab Add Button
         btnAddIncognito.setOnClickListener {
+            val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
+            // Agar pehla incognito tab hai, toh normal data ka backup karo
+            if (TabManager.tabsList.none { it.isIncognito }) {
+                prefs.edit().putBoolean("backup_normal_data", true).apply()
+            }
             val newTab = TabManager.addNewTab("kryptos://home", "Incognito Tab", true)
             TabManager.setActiveTab(newTab.id)
             finish()
