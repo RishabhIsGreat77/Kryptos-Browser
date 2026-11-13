@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var suggestionRunnable: Runnable? = null
     private var isKeyboardVisible = false
     private var currentSuggestions = mutableListOf<String>()
-    private var isUpdatingUrl = false // Fix: Prevents suggestions when loading links programmatically
+    private var isUpdatingUrl = false
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -157,7 +157,6 @@ class MainActivity : AppCompatActivity() {
 
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Fix: Exported required for system broadcasts
             registerReceiver(screenOffReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             registerReceiver(screenOffReceiver, filter)
@@ -235,8 +234,7 @@ class MainActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             
             override fun afterTextChanged(s: Editable?) {
-                if (isUpdatingUrl) return // Fix: Ignore text changes triggered by code
-                
+                if (isUpdatingUrl) return
                 val query = s.toString().trim()
                 if (query.isEmpty() || query == "kryptos://home") {
                     hideSuggestions()
@@ -358,7 +356,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             itemView.setOnClickListener {
-                addressBar?.clearFocus() // Fix: Remove focus to hide suggestions
+                addressBar?.clearFocus()
                 hideSuggestions()
                 loadUrlOrSearch(dial.url)
             }
@@ -514,7 +512,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnBookmark?.setOnClickListener {
-            // Fix: Block bookmarks in Incognito
             if (TabManager.getActiveTab()?.isIncognito == true) {
                 Toast.makeText(this, "Cannot bookmark in Incognito Mode", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -732,6 +729,7 @@ class MainActivity : AppCompatActivity() {
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
             request.addRequestHeader("User-Agent", userAgent)
+            request.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
             request.setTitle(fileName)
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
@@ -833,7 +831,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startCustomVoiceSearch() {
-        addressBar?.clearFocus() // Fix: Remove focus to hide suggestions
+        addressBar?.clearFocus()
         hideSuggestions()
 
         voiceSearchDialog = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen)
@@ -951,6 +949,7 @@ class MainActivity : AppCompatActivity() {
         }
         cookieManager.flush()
     }
+
     private fun executeIncognitoKill() {
         // Set the flag so SplashActivity wipes data on next open
         prefs.edit().putBoolean("wipe_on_next_launch", true).apply()
@@ -1035,6 +1034,7 @@ class MainActivity : AppCompatActivity() {
             }
             return super.shouldInterceptRequest(view, request)
         }
+        
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val url = request?.url.toString()
             
@@ -1065,7 +1065,6 @@ class MainActivity : AppCompatActivity() {
                     val fileName = URLUtil.guessFileName(url, null, null)
                     val dmRequest = DownloadManager.Request(Uri.parse(url))
                     dmRequest.setMimeType("application/vnd.android.package-archive")
-                    // Pass User-Agent and Cookies to bypass GitHub/site blocks
                     dmRequest.addRequestHeader("User-Agent", request?.requestHeaders?.get("User-Agent") ?: webView.settings.userAgentString)
                     dmRequest.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
                     dmRequest.setTitle(fileName)
@@ -1079,7 +1078,7 @@ class MainActivity : AppCompatActivity() {
                     downloadDb.addDownload(fileName, url, fullPath)
                     
                     Toast.makeText(this@MainActivity, "Download Started...", Toast.LENGTH_SHORT).show()
-                    return true // Stops the WebView from showing the error page
+                    return true
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -1093,15 +1092,7 @@ class MainActivity : AppCompatActivity() {
             }
             return false
         }
-            
-            // 2. Link Defanger
-            val defangedUrl = defangUrl(url)
-            if (url != defangedUrl) {
-                view?.loadUrl(defangedUrl)
-                return true
-            }
-            return false
-        }
+        
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             isUpdatingUrl = true
@@ -1120,7 +1111,6 @@ class MainActivity : AppCompatActivity() {
 
                 val activeTab = TabManager.getActiveTab()
                 if (activeTab?.isIncognito != true) {
-                    // Fix: Filter out search URLs so they don't show up in Speed Dial
                     val lowerUrl = url.lowercase()
                     val isSearch = lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search?") || lowerUrl.contains("?p=")
                     if (!isSearch) {
@@ -1167,7 +1157,6 @@ class MainActivity : AppCompatActivity() {
             fullscreenContainer.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             fullscreenContainer.visibility = View.VISIBLE
             
-            // Fix: Force Landscape for video
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             hideUIForFullscreen()
         }
@@ -1181,7 +1170,6 @@ class MainActivity : AppCompatActivity() {
             customViewCallback?.onCustomViewHidden()
             customViewCallback = null
             
-            // Fix: Restore Portrait
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             showUIBackFromFullscreen()
         }
