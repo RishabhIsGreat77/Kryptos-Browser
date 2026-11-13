@@ -6,6 +6,13 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
+import android.speech.RecognitionListener
+import android.speech.SpeechRecognizer
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import java.util.Locale
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -68,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var voiceSearchDialog: Dialog? = null
 
     // Cookie Backup Variable
     private val normalCookiesBackup = mutableMapOf<String, String>()
@@ -427,15 +436,11 @@ class MainActivity : AppCompatActivity() {
                 true
             } else false
         }
-
         findViewById<ImageView>(R.id.btn_voice_search)?.setOnClickListener {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search...")
-            try {
-                startActivityForResult(intent, 100)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Voice search not supported", Toast.LENGTH_SHORT).show()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 101)
+            } else {
+                startCustomVoiceSearch()
             }
         }
 
@@ -822,6 +827,83 @@ class MainActivity : AppCompatActivity() {
         cookieManager.flush()
     }
 
+        // Custom Voice Search Logic
+    private fun startCustomVoiceSearch() {
+        // Show Custom Dialog
+        voiceSearchDialog = Dialog(this)
+        voiceSearchDialog?.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        voiceSearchDialog?.setContentView(R.layout.dialog_voice_search)
+        voiceSearchDialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        voiceSearchDialog?.setCancelable(false)
+
+        val imgMic = voiceSearchDialog?.findViewById<ImageView>(R.id.img_mic)
+        val txtStatus = voiceSearchDialog?.findViewById<TextView>(R.id.txt_listening_status)
+        val btnCancel = voiceSearchDialog?.findViewById<TextView>(R.id.btn_cancel_voice)
+
+        // Blinking animation for mic
+        val animator = android.animation.ObjectAnimator.ofFloat(imgMic, "alpha", 1f, 0.3f, 1f)
+        animator.duration = 1000
+        animator.repeatCount = android.animation.ObjectAnimator.INFINITE
+        animator.start()
+
+        btnCancel?.setOnClickListener {
+            speechRecognizer?.stopListening()
+            voiceSearchDialog?.dismiss()
+            animator.cancel()
+        }
+
+        voiceSearchDialog?.show()
+
+        // Initialize SpeechRecognizer
+        if (speechRecognizer == null) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        }
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        }
+
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) { txtStatus?.text = "Listening..." }
+            override fun onBeginningOfSpeech() { txtStatus?.text = "Listening..." }
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() { txtStatus?.text = "Processing..." }
+            override fun onError(error: Int) {
+                animator.cancel()
+                voiceSearchDialog?.dismiss()
+                Toast.makeText(this@MainActivity, "Didn't catch that. Try again.", Toast.LENGTH_SHORT).show()
+            }
+            override fun onResults(results: Bundle?) {
+                animator.cancel()
+                voiceSearchDialog?.dismiss()
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    val spokenText = matches[0]
+                    addressBar?.setText(spokenText)
+                    loadUrlOrSearch(spokenText)
+                }
+            }
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+
+        speechRecognizer?.startListening(intent)
+    }
+
+    // Handle Permission Result
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 101) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCustomVoiceSearch()
+            } else {
+                Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun executeIncognitoKill() {
         try {
             webView.clearCache(true)
@@ -906,6 +988,7 @@ class MainActivity : AppCompatActivity() {
 
         if (this::webView.isInitialized) webView.destroy()
         super.onDestroy()
+        speechRecognizer?.destroy()
     }
 
     // ==========================================
