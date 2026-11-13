@@ -49,14 +49,13 @@ class TabsActivity : AppCompatActivity() {
             },
             onTabClose = { tab ->
                 TabManager.removeTab(tab)
-                // NEW: If the closed tab was Incognito, and no other Incognito tabs remain, trigger a data wipe
+                // Agar last incognito tab close hua hai, toh data wipe aur restore karo
                 if (tab.isIncognito && TabManager.tabsList.none { it.isIncognito }) {
                     val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
                     prefs.edit().putBoolean("wipe_incognito_data", true).apply()
                 }
                 updateTabList()
             }
-        )
         recyclerView.adapter = adapter
 
         // Tab mode switch listeners
