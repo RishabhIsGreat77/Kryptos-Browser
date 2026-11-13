@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.webkit.CookieManager
+import android.webkit.WebStorage
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 
@@ -20,6 +22,25 @@ class SplashActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
+
+        // Wipe data if Incognito Auto-Kill was triggered
+        if (prefs.getBoolean("wipe_on_next_launch", false)) {
+            try {
+                val cookieManager = CookieManager.getInstance()
+                cookieManager.removeAllCookies { cookieManager.flush() }
+                WebStorage.getInstance().deleteAllData()
+                
+                val dbHelper = HistoryDatabaseHelper(this)
+                dbHelper.clearHistory()
+                
+                TabManager.tabsList.removeAll { it.isIncognito }
+                
+                // Reset the flag
+                prefs.edit().putBoolean("wipe_on_next_launch", false).apply()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 
         Handler(Looper.getMainLooper()).postDelayed({
             startActivity(Intent(this, MainActivity::class.java))
