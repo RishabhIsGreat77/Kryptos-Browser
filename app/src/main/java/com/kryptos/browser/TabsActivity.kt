@@ -101,19 +101,23 @@ class TabsActivity : AppCompatActivity() {
     private fun updateTabSelectorUI() {
         if (isIncognitoMode) {
             layoutIncognito.setBackgroundResource(R.drawable.bg_speed_dial_box)
-            btnIncognito.setTextColor(Color.parseColor("#FFFFFF"))
-            btnAddIncognito.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_primary)
+            // Active Tab text (Neon Green)
+            btnIncognito.setTextColor(ContextCompat.getColor(this, R.color.kryptos_primary))
+            btnAddIncognito.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_primary)
             
             layoutNormal.setBackgroundColor(Color.TRANSPARENT)
-            btnNormal.setTextColor(Color.parseColor("#8B8B93"))
+            // Inactive Tab text (Grey)
+            btnNormal.setTextColor(ContextCompat.getColor(this, R.color.kryptos_text_secondary))
             btnAddNormal.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_secondary)
         } else {
             layoutNormal.setBackgroundResource(R.drawable.bg_speed_dial_box)
-            btnNormal.setTextColor(Color.parseColor("#FFFFFF"))
-            btnAddNormal.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_primary)
+            // Active Tab text (Neon Green)
+            btnNormal.setTextColor(ContextCompat.getColor(this, R.color.kryptos_primary))
+            btnAddNormal.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_primary)
             
             layoutIncognito.setBackgroundColor(Color.TRANSPARENT)
-            btnIncognito.setTextColor(Color.parseColor("#8B8B93"))
+            // Inactive Tab text (Grey)
+            btnIncognito.setTextColor(ContextCompat.getColor(this, R.color.kryptos_text_secondary))
             btnAddIncognito.imageTintList = ContextCompat.getColorStateList(this, R.color.kryptos_text_secondary)
         }
     }
