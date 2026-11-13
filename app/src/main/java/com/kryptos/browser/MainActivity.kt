@@ -951,32 +951,19 @@ class MainActivity : AppCompatActivity() {
         }
         cookieManager.flush()
     }
-
     private fun executeIncognitoKill() {
+        // Set the flag so SplashActivity wipes data on next open
+        prefs.edit().putBoolean("wipe_on_next_launch", true).apply()
+        
+        // Immediately remove from recents and close
         try {
-            webView.clearCache(true)
-            webView.clearHistory()
-            WebStorage.getInstance().deleteAllData()
-            dbHelper.clearHistory()
-            TabManager.tabsList.removeAll { it.isIncognito }
-            
-            val cookieManager = CookieManager.getInstance()
-            cookieManager.removeAllCookies {
-                cookieManager.flush()
-                
-                Handler(Looper.getMainLooper()).postDelayed({
-                    val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-                    finishAffinity()
-                    finishAndRemoveTask()
-                }, 300)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
             val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             activityManager.appTasks.forEach { it.finishAndRemoveTask() }
             finishAffinity()
             finishAndRemoveTask()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            finishAffinity()
         }
     }
 
@@ -1048,18 +1035,46 @@ class MainActivity : AppCompatActivity() {
             }
             return super.shouldInterceptRequest(view, request)
         }
-        
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val url = request?.url.toString()
-            val defangedUrl = defangUrl(url)
             
+            // 1. Download Interceptor Fix
+            val downloadExtensions = listOf(".apk", ".zip", ".pdf", ".exe", ".mp4", ".mp3", ".doc", ".docx")
+            val isDownload = downloadExtensions.any { url.lowercase().endsWith(it) } || url.contains("release-assets.githubusercontent.com")
+            
+            if (isDownload) {
+                try {
+                    val fileName = URLUtil.guessFileName(url, null, null)
+                    val dmRequest = DownloadManager.Request(Uri.parse(url))
+                    dmRequest.setMimeType("application/vnd.android.package-archive")
+                    // Pass User-Agent and Cookies to bypass GitHub blocks
+                    dmRequest.addRequestHeader("User-Agent", request?.requestHeaders?.get("User-Agent") ?: webView.settings.userAgentString)
+                    dmRequest.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
+                    dmRequest.setTitle(fileName)
+                    dmRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    dmRequest.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                    
+                    val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    dm.enqueue(dmRequest)
+                    
+                    val fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + fileName
+                    downloadDb.addDownload(fileName, url, fullPath)
+                    
+                    Toast.makeText(this@MainActivity, "Download Started...", Toast.LENGTH_SHORT).show()
+                    return true // Stops the WebView from showing the error page
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            
+            // 2. Link Defanger
+            val defangedUrl = defangUrl(url)
             if (url != defangedUrl) {
                 view?.loadUrl(defangedUrl)
                 return true
             }
             return false
         }
-        
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             isUpdatingUrl = true
