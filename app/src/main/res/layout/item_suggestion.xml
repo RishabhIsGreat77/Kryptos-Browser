@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp"
+    android:paddingVertical="14dp"
     android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
 
@@ -18,12 +18,11 @@
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <!-- Arrow Icon for Quick Paste -->
     <ImageView
         android:id="@+id/btn_arrow_paste"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:src="@android:drawable/ic_menu_send"
         android:tint="@color/kryptos_text_secondary"
-        android:rotation="45" /> <!-- Rotated to point top-left -->
+        android:rotation="45" />
 </LinearLayout>
