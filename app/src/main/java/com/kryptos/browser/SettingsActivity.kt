@@ -28,6 +28,8 @@ class SettingsActivity : AppCompatActivity() {
         val switchSuggestions = findViewById<Switch>(R.id.switch_suggestions)
         val switchDarkMode = findViewById<Switch>(R.id.switch_dark_mode)
         val switchIncognitoKill = findViewById<Switch>(R.id.switch_incognito_kill)
+        val switchForceDark = findViewById<Switch>(R.id.switch_force_dark)
+        val switchFullscreen = findViewById<Switch>(R.id.switch_fullscreen)
 
         val txtClearData = findViewById<TextView>(R.id.txt_clear_data_settings)
         val txtCheckUpdates = findViewById<TextView>(R.id.txt_check_updates)
@@ -35,7 +37,9 @@ class SettingsActivity : AppCompatActivity() {
         // Load Saved States
         switchSuggestions.isChecked = prefs.getBoolean("search_suggestions", true)
         switchDarkMode.isChecked = prefs.getBoolean("dark_mode", true)
-        switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", false)
+        switchIncognitoKill.isChecked = prefs.getBoolean("incognito_kill", true)
+        switchForceDark.isChecked = prefs.getBoolean("force_dark_mode", false)
+        switchFullscreen.isChecked = prefs.getBoolean("fullscreen_mode", false)
 
         // Listeners for Switches
         switchSuggestions.setOnCheckedChangeListener { _, isChecked ->
@@ -49,6 +53,14 @@ class SettingsActivity : AppCompatActivity() {
 
         switchIncognitoKill.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("incognito_kill", isChecked).apply()
+        }
+
+        switchForceDark.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("force_dark_mode", isChecked).apply()
+        }
+
+        switchFullscreen.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("fullscreen_mode", isChecked).apply()
         }
 
         // Clear Data Option
