@@ -814,24 +814,41 @@ class MainActivity : AppCompatActivity() {
     // INCOGNITO PROTOCOLS
     // ==========================================
     private fun executeIncognitoKill() {
-        webView.clearCache(true)
-        webView.clearHistory()
-        WebStorage.getInstance().deleteAllData()
-        CookieManager.getInstance().removeAllCookies(null)
-        dbHelper.clearHistory()
-
-        TabManager.tabsList.removeAll { it.isIncognito }
-
-        finishAffinity()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask()
+        try {
+            // 1. Clear Cache and History
+            webView.clearCache(true)
+            webView.clearHistory()
+            WebStorage.getInstance().deleteAllData()
+            
+            // 2. Clear Local Databases
+            dbHelper.clearHistory()
+            TabManager.tabsList.removeAll { it.isIncognito }
+            
+            // 3. Clear Cookies and wait for the callback to flush to disk
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.removeAllCookies {
+                cookieManager.flush()
+                
+                // 4. Delay the kill by 300ms to ensure OS writes the data to storage
+                Handler(Looper.getMainLooper()).postDelayed({
+                    finishAffinity()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        finishAndRemoveTask()
+                    }
+                    // Kill process for older devices to prevent background restart
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        System.exit(0)
+                    }
+                }, 300)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback if anything crashes
+            finishAffinity()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                finishAndRemoveTask()
+            }
         }
-
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-        activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-        
-        android.os.Process.killProcess(android.os.Process.myPid())
-        System.exit(0)
     }
 
     // ==========================================
