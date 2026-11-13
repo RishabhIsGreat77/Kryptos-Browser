@@ -813,6 +813,24 @@ class MainActivity : AppCompatActivity() {
     // ==========================================
     // INCOGNITO PROTOCOLS
     // ==========================================
+    // NEW: Clears all cookies, cache, and local storage when exiting Incognito
+    private fun clearIncognitoSessionData() {
+        try {
+            webView.clearCache(true)
+            webView.clearHistory()
+            WebStorage.getInstance().deleteAllData() // Clears LocalStorage (Fixes YouTube recommendations)
+            
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.removeAllCookies {
+                cookieManager.flush()
+            }
+            
+            // Note: Since we share a single WebView, this might log you out of sites in Normal mode too.
+            // But this is required to ensure Incognito is 100% private.
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
     private fun executeIncognitoKill() {
         try {
             // 1. Clear Cache and History
@@ -856,6 +874,13 @@ class MainActivity : AppCompatActivity() {
     // ==========================================
     override fun onResume() {
         super.onResume()
+        
+        // NEW: Clear Incognito Data if the last Incognito tab was closed
+        if (prefs.getBoolean("wipe_incognito_data", false)) {
+            clearIncognitoSessionData()
+            prefs.edit().putBoolean("wipe_incognito_data", false).apply()
+        }
+        
         updateTabCountUI()
         renderSpeedDials()
 
