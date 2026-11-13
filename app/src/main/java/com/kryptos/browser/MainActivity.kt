@@ -1038,8 +1038,26 @@ class MainActivity : AppCompatActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val url = request?.url.toString()
             
-            // 1. Download Interceptor Fix
-            val downloadExtensions = listOf(".apk", ".zip", ".pdf", ".exe", ".mp4", ".mp3", ".doc", ".docx")
+            // Expanded list of safe download extensions
+            val downloadExtensions = listOf(
+                // Android & Packages
+                ".apk", ".aab", ".xapk",
+                // Archives & Compressed
+                ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz",
+                // Documents
+                ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf", ".odt",
+                // Images
+                ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".heic",
+                // Videos
+                ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".3gp",
+                // Audio
+                ".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus",
+                // Executables & Software
+                ".exe", ".msi", ".dmg", ".iso", ".bin",
+                // E-books & Other
+                ".epub", ".mobi", ".azw3", ".torrent", ".ttf", ".otf", ".woff", ".woff2"
+            )
+            
             val isDownload = downloadExtensions.any { url.lowercase().endsWith(it) } || url.contains("release-assets.githubusercontent.com")
             
             if (isDownload) {
@@ -1047,7 +1065,7 @@ class MainActivity : AppCompatActivity() {
                     val fileName = URLUtil.guessFileName(url, null, null)
                     val dmRequest = DownloadManager.Request(Uri.parse(url))
                     dmRequest.setMimeType("application/vnd.android.package-archive")
-                    // Pass User-Agent and Cookies to bypass GitHub blocks
+                    // Pass User-Agent and Cookies to bypass GitHub/site blocks
                     dmRequest.addRequestHeader("User-Agent", request?.requestHeaders?.get("User-Agent") ?: webView.settings.userAgentString)
                     dmRequest.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
                     dmRequest.setTitle(fileName)
@@ -1066,6 +1084,15 @@ class MainActivity : AppCompatActivity() {
                     e.printStackTrace()
                 }
             }
+            
+            // Link Defanger
+            val defangedUrl = defangUrl(url)
+            if (url != defangedUrl) {
+                view?.loadUrl(defangedUrl)
+                return true
+            }
+            return false
+        }
             
             // 2. Link Defanger
             val defangedUrl = defangUrl(url)
