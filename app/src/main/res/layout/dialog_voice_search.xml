@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E6000000"> <!-- Dark semi-transparent background -->
+    android:background="#E6000000">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,7 +11,6 @@
         android:gravity="center"
         android:orientation="vertical">
 
-        <!-- Radar/Spinning circles container -->
         <FrameLayout
             android:layout_width="250dp"
             android:layout_height="250dp"
@@ -43,7 +42,6 @@
                 android:backgroundTint="@color/kryptos_primary"/>
         </FrameLayout>
 
-        <!-- Live Transcription Text -->
         <TextView
             android:id="@+id/txt_listening_status"
             android:layout_width="wrap_content"
@@ -57,7 +55,6 @@
             android:paddingHorizontal="24dp"/>
     </LinearLayout>
 
-    <!-- Close Button -->
     <FrameLayout
         android:id="@+id/btn_cancel_voice"
         android:layout_width="60dp"
