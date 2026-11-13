@@ -66,6 +66,8 @@ class MainActivity : AppCompatActivity() {
     private var suggestionsAdapter: ArrayAdapter<String>? = null
     private val suggestionHandler = Handler(Looper.getMainLooper())
     private var suggestionRunnable: Runnable? = null
+    private var isKeyboardVisible = false
+    private var currentSuggestions = mutableListOf<String>()
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -180,15 +182,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSuggestions() {
-        suggestionsAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
+        suggestionsAdapter = object : ArrayAdapter<String>(this, R.layout.item_suggestion, R.id.txt_suggestion, mutableListOf()) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val txtSuggestion = view.findViewById<TextView>(R.id.txt_suggestion)
+                val btnArrow = view.findViewById<ImageView>(R.id.btn_arrow_paste)
+                
+                val item = getItem(position)
+                txtSuggestion.text = item
+                
+                view.setOnClickListener {
+                    addressBar?.setText(item)
+                    hideSuggestions()
+                    loadUrlOrSearch(item!!)
+                }
+
+                btnArrow.setOnClickListener {
+                    addressBar?.setText(item)
+                    addressBar?.setSelection(addressBar?.text?.length ?: 0)
+                }
+                return view
+            }
+        }
         suggestionsList?.adapter = suggestionsAdapter
 
-        suggestionsList?.setOnItemClickListener { _, _, position, _ ->
-            val query = suggestionsAdapter?.getItem(position)
-            if (query != null) {
-                addressBar?.setText(query)
-                hideSuggestions()
-                loadUrlOrSearch(query)
+        val rootView = findViewById<View>(android.R.id.content)
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            val r = android.graphics.Rect()
+            rootView.getWindowVisibleDisplayFrame(r)
+            val screenHeight = rootView.height
+            val keypadHeight = screenHeight - r.bottom
+            val newKeyboardState = keypadHeight > screenHeight * 0.15
+            
+            if (isKeyboardVisible != newKeyboardState) {
+                isKeyboardVisible = newKeyboardState
+                if (addressBar?.hasFocus() == true && suggestionsList?.visibility == View.VISIBLE) {
+                    val limit = if (isKeyboardVisible) 4 else 8
+                    updateSuggestionsView(currentSuggestions, limit)
+                }
             }
         }
 
@@ -209,6 +240,15 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun updateSuggestionsView(suggestions: List<String>, limit: Int) {
+        suggestionsAdapter?.clear()
+        suggestionsAdapter?.addAll(suggestions.take(limit))
+        suggestionsAdapter?.notifyDataSetChanged()
+        if (suggestions.isNotEmpty()) {
+            suggestionsList?.visibility = View.VISIBLE
+        }
+    }
+
     private fun fetchSuggestions(query: String) {
         suggestionRunnable?.let { suggestionHandler.removeCallbacks(it) }
         suggestionRunnable = Runnable {
@@ -223,20 +263,14 @@ class MainActivity : AppCompatActivity() {
                     
                     val jsonArray = org.json.JSONArray(response)
                     val suggestionsArray = jsonArray.getJSONArray(1)
-                    val suggestions = mutableListOf<String>()
+                    currentSuggestions.clear()
                     for (i in 0 until suggestionsArray.length()) {
-                        suggestions.add(suggestionsArray.getString(i))
+                        currentSuggestions.add(suggestionsArray.getString(i))
                     }
                     
                     runOnUiThread {
-                        if (suggestions.isNotEmpty()) {
-                            suggestionsAdapter?.clear()
-                            suggestionsAdapter?.addAll(suggestions)
-                            suggestionsAdapter?.notifyDataSetChanged()
-                            suggestionsList?.visibility = View.VISIBLE
-                        } else {
-                            hideSuggestions()
-                        }
+                        val limit = if (isKeyboardVisible) 4 else 8
+                        updateSuggestionsView(currentSuggestions, limit)
                     }
                 } catch (e: Exception) {
                     runOnUiThread { hideSuggestions() }
@@ -313,6 +347,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             itemView.setOnClickListener {
+                addressBar?.clearFocus() // <-- Focus hatao
+                hideSuggestions()        // <-- Suggestions chupao
                 loadUrlOrSearch(dial.url)
             }
 
@@ -499,9 +535,9 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 2, 2, "History")
             popup.menu.add(0, 5, 5, "Bookmarks")
             popup.menu.add(0, 3, 3, themeText)
+            popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 8, 8, "Downloads")
-            popup.menu.add(0, 4, 4, "Settings")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -771,29 +807,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // CUSTOM VOICE SEARCH
-    // ==========================================
     private fun startCustomVoiceSearch() {
-        voiceSearchDialog = Dialog(this)
+        addressBar?.clearFocus()
+        hideSuggestions()
+
+        voiceSearchDialog = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen)
         voiceSearchDialog?.requestWindowFeature(Window.FEATURE_NO_TITLE)
         voiceSearchDialog?.setContentView(R.layout.dialog_voice_search)
-        voiceSearchDialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         voiceSearchDialog?.setCancelable(false)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            voiceSearchDialog?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+        }
 
-        val imgMic = voiceSearchDialog?.findViewById<ImageView>(R.id.img_mic)
         val txtStatus = voiceSearchDialog?.findViewById<TextView>(R.id.txt_listening_status)
-        val btnCancel = voiceSearchDialog?.findViewById<TextView>(R.id.btn_cancel_voice)
+        val btnCancel = voiceSearchDialog?.findViewById<FrameLayout>(R.id.btn_cancel_voice)
+        val outerCircle = voiceSearchDialog?.findViewById<ImageView>(R.id.img_circle_outer)
+        val innerCircle = voiceSearchDialog?.findViewById<ImageView>(R.id.img_circle_inner)
 
-        val animator = android.animation.ObjectAnimator.ofFloat(imgMic, "alpha", 1f, 0.3f, 1f)
-        animator.duration = 1000
-        animator.repeatCount = android.animation.ObjectAnimator.INFINITE
-        animator.start()
+        if (outerCircle != null && innerCircle != null) {
+            val rotateOuter = android.animation.ObjectAnimator.ofFloat(outerCircle, "rotation", 0f, 360f).apply {
+                duration = 4000; repeatCount = android.animation.ObjectAnimator.INFINITE; interpolator = android.view.animation.LinearInterpolator()
+            }
+            val rotateInner = android.animation.ObjectAnimator.ofFloat(innerCircle, "rotation", 360f, 0f).apply {
+                duration = 3000; repeatCount = android.animation.ObjectAnimator.INFINITE; interpolator = android.view.animation.LinearInterpolator()
+            }
+            rotateOuter.start(); rotateInner.start()
+        }
 
         btnCancel?.setOnClickListener {
             speechRecognizer?.stopListening()
             voiceSearchDialog?.dismiss()
-            animator.cancel()
         }
 
         voiceSearchDialog?.show()
@@ -805,30 +849,33 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
 
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { txtStatus?.text = "Listening..." }
-            override fun onBeginningOfSpeech() { txtStatus?.text = "Listening..." }
+            override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() { txtStatus?.text = "Processing..." }
             override fun onError(error: Int) {
-                animator.cancel()
                 voiceSearchDialog?.dismiss()
-                Toast.makeText(this@MainActivity, "Didn't catch that. Try again.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Didn't catch that.", Toast.LENGTH_SHORT).show()
             }
             override fun onResults(results: Bundle?) {
-                animator.cancel()
                 voiceSearchDialog?.dismiss()
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
-                    val spokenText = matches[0]
-                    addressBar?.setText(spokenText)
-                    loadUrlOrSearch(spokenText)
+                    addressBar?.setText(matches[0])
+                    loadUrlOrSearch(matches[0])
                 }
             }
-            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    txtStatus?.text = matches[0]
+                }
+            }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
 
@@ -846,9 +893,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // INCOGNITO & COOKIE BACKUP
-    // ==========================================
     private fun backupNormalCookies() {
         normalCookiesBackup.clear()
         val cookieManager = CookieManager.getInstance()
@@ -880,7 +924,7 @@ class MainActivity : AppCompatActivity() {
         }
         cookieManager.flush()
     }
-    
+
     private fun executeIncognitoKill() {
         try {
             webView.clearCache(true)
@@ -898,7 +942,6 @@ class MainActivity : AppCompatActivity() {
                     activityManager.appTasks.forEach { it.finishAndRemoveTask() }
                     finishAffinity()
                     finishAndRemoveTask()
-                    // System.exit(0) is removed to prevent auto-restart
                 }, 300)
             }
         } catch (e: Exception) {
@@ -909,9 +952,7 @@ class MainActivity : AppCompatActivity() {
             finishAndRemoveTask()
         }
     }
-    // ==========================================
-    // LIFECYCLE METHODS
-    // ==========================================
+
     override fun onResume() {
         super.onResume()
         
@@ -966,9 +1007,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // ==========================================
-    // WEBVIEW CLIENTS
-    // ==========================================
     inner class KryptosWebViewClient : WebViewClient() {
         
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
