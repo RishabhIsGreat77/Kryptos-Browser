@@ -6,7 +6,6 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.Context
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -56,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private var speedDialGrid: GridLayout? = null
     private var btnBookmark: ImageView? = null
 
-    // Suggestions Variables
     private var suggestionsList: ListView? = null
     private var suggestionsAdapter: ArrayAdapter<String>? = null
     private val suggestionHandler = Handler(Looper.getMainLooper())
@@ -70,9 +68,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
+
+    // Cookie Backup Variable
     private val normalCookiesBackup = mutableMapOf<String, String>()
 
-    // Fullscreen & Immersive Variables
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
@@ -169,9 +168,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // SEARCH SUGGESTIONS & VOICE SEARCH LOGIC
-    // ==========================================
     private fun setupSuggestions() {
         suggestionsAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
         suggestionsList?.adapter = suggestionsAdapter
@@ -255,9 +251,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // SPEED DIAL LOGIC
-    // ==========================================
     private fun renderSpeedDials() {
         speedDialGrid?.removeAllViews()
 
@@ -411,9 +404,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // TOOLBAR & MENU
-    // ==========================================
     private fun setupToolbar() {
         val clearAddressBar = View.OnClickListener {
             if (addressBar?.text.toString() == "kryptos://home") {
@@ -619,9 +609,6 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    // ==========================================
-    // URL / SEARCH LOADER
-    // ==========================================
     private fun loadUrlOrSearch(input: String) {
         hideSuggestions()
         val url = if (input.contains(".") && !input.contains(" ")) {
@@ -664,9 +651,6 @@ class MainActivity : AppCompatActivity() {
         renderSpeedDials()
     }
 
-    // ==========================================
-    // WEBVIEW SETUP
-    // ==========================================
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val settings = webView.settings
@@ -684,7 +668,7 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
 
-            webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
             val request = DownloadManager.Request(Uri.parse(url))
             request.setMimeType(mimeType)
@@ -703,7 +687,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
     }
-    
 
     private fun checkAndClearCache() {
         Thread {
@@ -732,9 +715,6 @@ class MainActivity : AppCompatActivity() {
         return size
     }
 
-    // ==========================================
-    // IMMERSIVE & FULLSCREEN LOGIC
-    // ==========================================
     private fun toggleDesktopMode() {
         val isDesktop = webView.settings.userAgentString.contains("Windows NT")
         if (!isDesktop) {
@@ -818,38 +798,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // INCOGNITO PROTOCOLS
+    // INCOGNITO & COOKIE BACKUP PROTOCOLS
     // ==========================================
-    // NEW: Clears all cookies, cache, and local storage when exiting Incognito
-    private fun clearIncognitoSessionData() {
-        try {
-            webView.clearCache(true)
-            webView.clearHistory()
-            WebStorage.getInstance().deleteAllData() // Clears LocalStorage (Fixes YouTube recommendations)
-            
-            val cookieManager = CookieManager.getInstance()
-            cookieManager.removeAllCookies {
-                cookieManager.flush()
-            }
-            
-            // Note: Since we share a single WebView, this might log you out of sites in Normal mode too.
-            // But this is required to ensure Incognito is 100% private.
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-        // Backup cookies of Normal tabs
     private fun backupNormalCookies() {
         normalCookiesBackup.clear()
         val cookieManager = CookieManager.getInstance()
         
-        // Backup for all currently open normal tabs
         for (tab in TabManager.tabsList.filter { !it.isIncognito }) {
             val cookie = cookieManager.getCookie(tab.url)
             if (cookie != null) normalCookiesBackup[tab.url] = cookie
         }
         
-        // Backup for most common sites (just in case they are not in active tabs)
         val commonSites = listOf("https://www.youtube.com", "https://github.com", "https://www.reddit.com", "https://www.google.com")
         for (site in commonSites) {
             val cookie = cookieManager.getCookie(site)
@@ -857,7 +816,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Clear all cookies and local storage
     private fun clearAllCookies() {
         val cookieManager = CookieManager.getInstance()
         cookieManager.removeAllCookies {
@@ -866,7 +824,6 @@ class MainActivity : AppCompatActivity() {
         WebStorage.getInstance().deleteAllData()
     }
 
-    // Restore cookies of Normal tabs
     private fun restoreNormalCookies() {
         val cookieManager = CookieManager.getInstance()
         for ((url, cookie) in normalCookiesBackup) {
@@ -874,29 +831,24 @@ class MainActivity : AppCompatActivity() {
         }
         cookieManager.flush()
     }
+
     private fun executeIncognitoKill() {
         try {
-            // 1. Clear Cache and History
             webView.clearCache(true)
             webView.clearHistory()
             WebStorage.getInstance().deleteAllData()
-            
-            // 2. Clear Local Databases
             dbHelper.clearHistory()
             TabManager.tabsList.removeAll { it.isIncognito }
             
-            // 3. Clear Cookies and wait for the callback to flush to disk
             val cookieManager = CookieManager.getInstance()
             cookieManager.removeAllCookies {
                 cookieManager.flush()
                 
-                // 4. Delay the kill by 300ms to ensure OS writes the data to storage
                 Handler(Looper.getMainLooper()).postDelayed({
                     finishAffinity()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         finishAndRemoveTask()
                     }
-                    // Kill process for older devices to prevent background restart
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         System.exit(0)
                     }
@@ -904,7 +856,6 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            // Fallback if anything crashes
             finishAffinity()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 finishAndRemoveTask()
@@ -912,9 +863,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // LIFECYCLE METHODS
-    // ==========================================
     override fun onResume() {
         super.onResume()
         
@@ -932,17 +880,17 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putBoolean("wipe_incognito_data", false).apply()
             
             // Reload active tab to apply restored cookies
-            val activeTab = TabManager.getActiveTab()
-            if (activeTab?.url == "kryptos://home") {
+            val currentTab = TabManager.getActiveTab()
+            if (currentTab?.url == "kryptos://home") {
                 showHomepageUI()
-            } else {
-                loadUrlOrSearch(activeTab?.url ?: "kryptos://home")
+            } else if (currentTab != null) {
+                loadUrlOrSearch(currentTab.url)
             }
         }
         
         updateTabCountUI()
         renderSpeedDials()
-
+        
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
