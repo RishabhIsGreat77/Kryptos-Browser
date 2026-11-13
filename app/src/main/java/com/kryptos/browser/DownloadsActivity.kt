@@ -67,23 +67,35 @@ class DownloadsActivity : AppCompatActivity() {
     private fun openFile(item: DownloadItem) {
         val file = File(item.path)
         if (file.exists()) {
-            val extension = MimeTypeMap.getFileExtensionFromUrl(Uri.fromFile(file).toString())
-            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "*/*"
-            
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(Uri.fromFile(file), mimeType)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
             try {
+                val extension = file.extension.lowercase()
+                var mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: "*/*"
+                
+                // Force APK MimeType if it's an APK
+                if (extension == "apk") {
+                    mimeType = "application/vnd.android.package-archive"
+                }
+
+                // Use FileProvider to avoid FileUriExposedException
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, 
+                    "$packageName.fileprovider", 
+                    file
+                )
+                
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
                 startActivity(intent)
             } catch (e: Exception) {
-                Toast.makeText(this, "Cannot open this file type", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Cannot open this file: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         } else {
             Toast.makeText(this, "File not found on device", Toast.LENGTH_SHORT).show()
         }
     }
-
     private fun showDeleteItemDialog(item: DownloadItem) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
