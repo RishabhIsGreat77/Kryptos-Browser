@@ -481,11 +481,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
         }
-
-        findViewById<ImageButton>(R.id.btn_fullscreen)?.setOnClickListener {
-            toggleImmersiveMode()
-        }
-
         findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
             val isDark = prefs.getBoolean("dark_mode", true)
@@ -494,10 +489,8 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 1, 1, "Incognito Mode")
             popup.menu.add(0, 2, 2, "History")
             popup.menu.add(0, 5, 5, "Bookmarks")
-            popup.menu.add(0, 3, 3, themeText)
             popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
-            popup.menu.add(0, 7, 7, "Force Dark Mode")
             popup.menu.add(0, 8, 8, "Downloads")
 
             popup.setOnMenuItemClickListener { item ->
@@ -517,19 +510,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
                     5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
-                    3 -> {
-                        val newMode = !isDark
-                        prefs.edit().putBoolean("dark_mode", newMode).apply()
-                        AppCompatDelegate.setDefaultNightMode(if (newMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
-                        recreate(); true
-                    }
                     4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
                     6 -> {
                         toggleDesktopMode()
-                        true
-                    }
-                    7 -> {
-                        toggleForceDarkMode()
                         true
                     }
                     8 -> { startActivity(Intent(this, DownloadsActivity::class.java)); true }
@@ -687,6 +670,13 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
     }
+    // Apply Force Dark Mode from Settings
+    val isDarkForced = prefs.getBoolean("force_dark_mode", false)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        settings.isAlgorithmicDarkeningAllowed = isDarkForced
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            settings.forceDark = if (isDarkForced) android.webkit.WebSettings.FORCE_DARK_ON else android.webkit.WebSettings.FORCE_DARK_OFF
+        }
 
     private fun checkAndClearCache() {
         Thread {
@@ -900,7 +890,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
+    // Apply Fullscreen mode from Settings
+    val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
+    if (isFullscreenEnabled && !isImmersiveMode) {
+            hideUIForFullscreen()
+        } else if (!isFullscreenEnabled && isImmersiveMode) {
+            showUIBackFromFullscreen()
+        }
     override fun onDestroy() {
         try {
             unregisterReceiver(screenOffReceiver)
