@@ -42,8 +42,6 @@ class TabsActivity : AppCompatActivity() {
         recyclerView.layoutManager = GridLayoutManager(this, 2)
 
         // Auto-detect mode based on currently active tab
-        isIncognitoMode = TabManager.getActiveTab()?.isIncognito ?: false
-
         adapter = TabsAdapter(mutableListOf(),
             onTabClick = { tab ->
                 TabManager.setActiveTab(tab.id)
@@ -51,6 +49,11 @@ class TabsActivity : AppCompatActivity() {
             },
             onTabClose = { tab ->
                 TabManager.removeTab(tab)
+                // NEW: If the closed tab was Incognito, and no other Incognito tabs remain, trigger a data wipe
+                if (tab.isIncognito && TabManager.tabsList.none { it.isIncognito }) {
+                    val prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean("wipe_incognito_data", true).apply()
+                }
                 updateTabList()
             }
         )
