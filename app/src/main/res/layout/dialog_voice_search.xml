@@ -1,39 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="300dp"
-    android:layout_height="wrap_content"
-    android:background="@drawable/bg_card"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#E6000000"> <!-- Dark semi-transparent background -->
 
-    <!-- Glowing Mic Icon -->
-    <ImageView
-        android:id="@+id/img_mic"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:src="@android:drawable/ic_btn_speak_now"
-        android:tint="@color/kryptos_primary"
-        android:layout_marginBottom="24dp"/>
-
-    <TextView
-        android:id="@+id/txt_listening_status"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Listening..."
-        android:textColor="@color/kryptos_text_primary"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp"/>
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical">
 
-    <!-- Cancel Button -->
-    <TextView
+        <!-- Radar/Spinning circles container -->
+        <FrameLayout
+            android:layout_width="250dp"
+            android:layout_height="250dp"
+            android:layout_gravity="center">
+            
+            <ImageView
+                android:id="@+id/img_circle_outer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@android:drawable/ic_menu_compass"
+                android:tint="#88FFFFFF"
+                android:scaleType="centerInside"/>
+                
+            <ImageView
+                android:id="@+id/img_circle_inner"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_gravity="center"
+                android:src="@android:drawable/ic_menu_compass"
+                android:tint="#44FFFFFF"
+                android:scaleType="centerInside"/>
+
+            <View
+                android:id="@+id/dot_center"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_inner_circle"
+                android:backgroundTint="@color/kryptos_primary"/>
+        </FrameLayout>
+
+        <!-- Live Transcription Text -->
+        <TextView
+            android:id="@+id/txt_listening_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="Listening..."
+            android:textColor="@color/kryptos_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingHorizontal="24dp"/>
+    </LinearLayout>
+
+    <!-- Close Button -->
+    <FrameLayout
         android:id="@+id/btn_cancel_voice"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Cancel"
-        android:textColor="@color/kryptos_error"
-        android:textSize="16sp"
-        android:padding="8dp"
-        android:background="?attr/selectableItemBackground"/>
-</LinearLayout>
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="64dp"
+        android:background="@drawable/bg_card"
+        android:backgroundTint="#55FFFFFF">
+        
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#000000"/>
+    </FrameLayout>
+
+</RelativeLayout>
