@@ -49,6 +49,7 @@
                 android:maxLines="1"
                 android:selectAllOnFocus="true" />
 
+            <!-- FIXED TINTS for Light Mode -->
             <ImageView
                 android:id="@+id/btn_voice_search"
                 android:layout_width="24dp"
@@ -56,7 +57,7 @@
                 android:layout_marginEnd="8dp"
                 android:src="@android:drawable/ic_btn_speak_now"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:tint="@color/kryptos_text_primary" />
+                android:tint="@color/kryptos_text_secondary" />
 
             <ImageView
                 android:id="@+id/btn_bookmark"
@@ -65,7 +66,7 @@
                 android:layout_marginEnd="8dp"
                 android:src="@drawable/ic_star_empty"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:tint="@color/kryptos_text_primary" />
+                android:tint="@color/kryptos_text_secondary" />
 
             <ImageButton
                 android:id="@+id/btn_reload"
@@ -73,7 +74,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_reload"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:tint="@color/kryptos_text_primary" />
+                android:tint="@color/kryptos_text_secondary" />
         </LinearLayout>
     </LinearLayout>
 
@@ -92,7 +93,6 @@
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/top_bar" />
 
-    <!-- PROGRESS BAR -->
     <ProgressBar
         android:id="@+id/progress_bar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -105,7 +105,6 @@
         app:layout_constraintTop_toBottomOf="@id/top_bar"
         android:layout_marginTop="8dp"/>
 
-    <!-- MAIN CONTENT -->
     <FrameLayout
         android:id="@+id/content_frame"
         android:layout_width="match_parent"
@@ -135,7 +134,6 @@
         </FrameLayout>
     </FrameLayout>
 
-    <!-- FLOATING BOTTOM DOCK -->
     <LinearLayout
         android:id="@+id/bottom_dock"
         android:layout_width="match_parent"
@@ -188,7 +186,7 @@
                 android:layout_height="28dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_incognito"
-                android:tint="@color/kryptos_text_primary"
+                android:tint="@color/kryptos_text_secondary"
                 android:visibility="gone" />
 
             <View
@@ -204,7 +202,6 @@
 
     </LinearLayout>
 
-    <!-- GESTURE PILL CONTAINER -->
     <FrameLayout
         android:id="@+id/pill_container"
         android:layout_width="140dp"
@@ -224,7 +221,6 @@
             android:background="@drawable/bg_pill_light" />
     </FrameLayout>
 
-    <!-- Fullscreen Video Container -->
     <FrameLayout
         android:id="@+id/fullscreen_container"
         android:layout_width="match_parent"
