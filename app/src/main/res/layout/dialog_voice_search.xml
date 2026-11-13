@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp">
+
+    <!-- Glowing Mic Icon -->
+    <ImageView
+        android:id="@+id/img_mic"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@android:drawable/ic_btn_speak_now"
+        android:tint="@color/kryptos_primary"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:id="@+id/txt_listening_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Listening..."
+        android:textColor="@color/kryptos_text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <!-- Cancel Button -->
+    <TextView
+        android:id="@+id/btn_cancel_voice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cancel"
+        android:textColor="@color/kryptos_error"
+        android:textSize="16sp"
+        android:padding="8dp"
+        android:background="?attr/selectableItemBackground"/>
+</LinearLayout>
