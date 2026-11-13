@@ -21,6 +21,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
@@ -54,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var speedDialGrid: GridLayout? = null
     private var btnBookmark: ImageView? = null
 
-    // New: Suggestions Variables
+    // Suggestions Variables
     private var suggestionsList: ListView? = null
     private var suggestionsAdapter: ArrayAdapter<String>? = null
     private val suggestionHandler = Handler(Looper.getMainLooper())
@@ -68,6 +69,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var dockController: DockController
 
+    // Fullscreen & Immersive Variables
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var isImmersiveMode = false
+
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
@@ -77,8 +83,6 @@ class MainActivity : AppCompatActivity() {
         Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
     private var selectedEngineIndex = 0
-    private var isDesktopMode = false
-    private var isForceDarkMode = false
     
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -206,7 +210,6 @@ class MainActivity : AppCompatActivity() {
                     connection.connect()
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     
-                    // Response is like: ["query", ["suggestion1", "suggestion2"]]
                     val jsonArray = org.json.JSONArray(response)
                     val suggestionsArray = jsonArray.getJSONArray(1)
                     val suggestions = mutableListOf<String>()
@@ -229,7 +232,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }.start()
         }
-        suggestionHandler.postDelayed(suggestionRunnable!!, 300) // 300ms debounce
+        suggestionHandler.postDelayed(suggestionRunnable!!, 300)
     }
 
     private fun hideSuggestions() {
@@ -431,7 +434,6 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
 
-        // Voice Search Logic
         findViewById<ImageView>(R.id.btn_voice_search)?.setOnClickListener {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -439,7 +441,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 startActivityForResult(intent, 100)
             } catch (e: Exception) {
-                Toast.makeText(this, "Voice search not supported on this device", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Voice search not supported", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -484,6 +486,10 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btn_tabs)?.setOnClickListener {
             startActivity(Intent(this, TabsActivity::class.java))
+        }
+
+        findViewById<ImageButton>(R.id.btn_fullscreen)?.setOnClickListener {
+            toggleImmersiveMode()
         }
 
         findViewById<ImageButton>(R.id.btn_menu)?.setOnClickListener { view ->
@@ -545,6 +551,13 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                if (customView != null) {
+                    return
+                }
+                if (isImmersiveMode) {
+                    toggleImmersiveMode()
+                    return
+                }
                 if (suggestionsList?.visibility == View.VISIBLE) {
                     hideSuggestions()
                     return
@@ -659,36 +672,6 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = KryptosWebViewClient()
         webView.webChromeClient = KryptosWebChromeClient()
-        
-        private fun toggleDesktopMode() {
-        isDesktopMode = !isDesktopMode
-        if (isDesktopMode) {
-            webView.settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-            Toast.makeText(this, "Desktop Site Enabled", Toast.LENGTH_SHORT).show()
-        } else {
-            webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
-            Toast.makeText(this, "Mobile Site Enabled", Toast.LENGTH_SHORT).show()
-        }
-        webView.reload()
-    }
-
-    private fun toggleForceDarkMode() {
-        isForceDarkMode = !isForceDarkMode
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            webView.settings.isAlgorithmicDarkeningAllowed = isForceDarkMode
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            webView.settings.forceDark = if (isForceDarkMode) android.webkit.WebSettings.FORCE_DARK_ON else android.webkit.WebSettings.FORCE_DARK_OFF
-        } else {
-            // For older devices, we can use a CSS hack, but let's keep it simple for now
-            Toast.makeText(this, "Force Dark Mode requires Android 10+", Toast.LENGTH_SHORT).show()
-            isForceDarkMode = !isForceDarkMode // revert
-            return
-        }
-        
-        val msg = if (isForceDarkMode) "Dark Mode Forced ON" else "Dark Mode Forced OFF"
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-        webView.reload()
-    }
 
         webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             val request = DownloadManager.Request(Uri.parse(url))
@@ -728,6 +711,91 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) { }
         return size
+    }
+
+    // ==========================================
+    // IMMERSIVE & FULLSCREEN LOGIC
+    // ==========================================
+    private fun toggleDesktopMode() {
+        val isDesktop = webView.settings.userAgentString.contains("Windows NT")
+        if (!isDesktop) {
+            webView.settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+            Toast.makeText(this, "Desktop Site Enabled", Toast.LENGTH_SHORT).show()
+        } else {
+            webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+            Toast.makeText(this, "Mobile Site Enabled", Toast.LENGTH_SHORT).show()
+        }
+        webView.reload()
+    }
+
+    private fun toggleForceDarkMode() {
+        val isDarkForced = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            webView.settings.isAlgorithmicDarkeningAllowed
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            webView.settings.forceDark == android.webkit.WebSettings.FORCE_DARK_ON
+        } else {
+            false
+        }
+
+        if (!isDarkForced) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                webView.settings.isAlgorithmicDarkeningAllowed = true
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                webView.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_ON
+            } else {
+                Toast.makeText(this, "Force Dark Mode requires Android 10+", Toast.LENGTH_SHORT).show()
+                return
+            }
+            Toast.makeText(this, "Force Dark Mode ON", Toast.LENGTH_SHORT).show()
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                webView.settings.isAlgorithmicDarkeningAllowed = false
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                webView.settings.forceDark = android.webkit.WebSettings.FORCE_DARK_OFF
+            }
+            Toast.makeText(this, "Force Dark Mode OFF", Toast.LENGTH_SHORT).show()
+        }
+        webView.reload()
+    }
+
+    private fun toggleImmersiveMode() {
+        isImmersiveMode = !isImmersiveMode
+        if (isImmersiveMode) {
+            hideUIForFullscreen()
+        } else {
+            showUIBackFromFullscreen()
+        }
+    }
+
+    private fun hideUIForFullscreen() {
+        isImmersiveMode = true
+        findViewById<View>(R.id.top_bar).visibility = View.GONE
+        findViewById<View>(R.id.progress_bar).visibility = View.GONE
+        bottomDock?.visibility = View.GONE
+        
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY 
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE 
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION 
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN 
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION 
+                or View.SYSTEM_UI_FLAG_FULLSCREEN)
+        
+        dockController.setHomePage(false)
+        dockController.hideDockAndShowPill()
+    }
+
+    private fun showUIBackFromFullscreen() {
+        isImmersiveMode = false
+        findViewById<View>(R.id.top_bar).visibility = View.VISIBLE
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        
+        if (homepageContainer?.visibility == View.VISIBLE) {
+            dockController.setHomePage(true)
+            bottomDock?.visibility = View.VISIBLE
+        } else {
+            dockController.setHomePage(false)
+            dockController.hideDockAndShowPill()
+        }
     }
 
     // ==========================================
@@ -855,6 +923,33 @@ class MainActivity : AppCompatActivity() {
             super.onProgressChanged(view, newProgress)
             if (newProgress < 100) { progressBar?.visibility = View.VISIBLE; progressBar?.progress = newProgress }
             else { progressBar?.visibility = View.GONE }
+        }
+
+        override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+            if (customView != null) {
+                onHideCustomView()
+                return
+            }
+            customView = view
+            customViewCallback = callback
+            
+            val fullscreenContainer = findViewById<FrameLayout>(R.id.fullscreen_container)
+            fullscreenContainer.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            fullscreenContainer.visibility = View.VISIBLE
+            
+            hideUIForFullscreen()
+        }
+
+        override fun onHideCustomView() {
+            if (customView == null) return
+            val fullscreenContainer = findViewById<FrameLayout>(R.id.fullscreen_container)
+            fullscreenContainer.removeView(customView)
+            fullscreenContainer.visibility = View.GONE
+            customView = null
+            customViewCallback?.onCustomViewHidden()
+            customViewCallback = null
+            
+            showUIBackFromFullscreen()
         }
     }
 }
