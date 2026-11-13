@@ -211,6 +211,9 @@
                 android:background="?attr/selectableItemBackgroundBorderless" />
         </FrameLayout>
 
+                <!-- NEW: Fullscreen Button -->
+        <ImageButton android:id="@+id/btn_fullscreen" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@android:drawable/ic_menu_view" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
+
         <!-- Menu -->
         <ImageButton android:id="@+id/btn_menu" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:src="@drawable/ic_menu" android:background="?attr/selectableItemBackgroundBorderless" android:tint="@color/kryptos_text_secondary" />
 
@@ -235,5 +238,18 @@
             android:layout_gravity="center"
             android:background="@drawable/bg_pill_light" />
     </FrameLayout>
+
+        <!-- Fullscreen Video Container -->
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/kryptos_background"
+        android:visibility="gone"
+        android:elevation="20dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
