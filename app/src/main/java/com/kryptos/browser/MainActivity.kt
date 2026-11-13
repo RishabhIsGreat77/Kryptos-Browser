@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var suggestionRunnable: Runnable? = null
     private var isKeyboardVisible = false
     private var currentSuggestions = mutableListOf<String>()
+    private var isUpdatingUrl = false // Fix: Prevents suggestions when loading links programmatically
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -155,7 +157,8 @@ class MainActivity : AppCompatActivity() {
 
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            // Fix: Exported required for system broadcasts
+            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             registerReceiver(screenOffReceiver, filter)
         }
@@ -192,13 +195,17 @@ class MainActivity : AppCompatActivity() {
                 txtSuggestion.text = item
                 
                 view.setOnClickListener {
+                    isUpdatingUrl = true
                     addressBar?.setText(item)
+                    isUpdatingUrl = false
                     hideSuggestions()
                     loadUrlOrSearch(item!!)
                 }
 
                 btnArrow.setOnClickListener {
+                    isUpdatingUrl = true
                     addressBar?.setText(item)
+                    isUpdatingUrl = false
                     addressBar?.setSelection(addressBar?.text?.length ?: 0)
                 }
                 return view
@@ -228,6 +235,8 @@ class MainActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             
             override fun afterTextChanged(s: Editable?) {
+                if (isUpdatingUrl) return // Fix: Ignore text changes triggered by code
+                
                 val query = s.toString().trim()
                 if (query.isEmpty() || query == "kryptos://home") {
                     hideSuggestions()
@@ -290,7 +299,9 @@ class MainActivity : AppCompatActivity() {
             val results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
             if (!results.isNullOrEmpty()) {
                 val spokenText = results[0]
+                isUpdatingUrl = true
                 addressBar?.setText(spokenText)
+                isUpdatingUrl = false
                 loadUrlOrSearch(spokenText)
             }
         }
@@ -347,8 +358,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             itemView.setOnClickListener {
-                addressBar?.clearFocus() // <-- Focus hatao
-                hideSuggestions()        // <-- Suggestions chupao
+                addressBar?.clearFocus() // Fix: Remove focus to hide suggestions
+                hideSuggestions()
                 loadUrlOrSearch(dial.url)
             }
 
@@ -454,7 +465,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupToolbar() {
         val clearAddressBar = View.OnClickListener {
             if (addressBar?.text.toString() == "kryptos://home") {
+                isUpdatingUrl = true
                 addressBar?.setText("")
+                isUpdatingUrl = false
             }
         }
 
@@ -462,7 +475,9 @@ class MainActivity : AppCompatActivity() {
 
         addressBar?.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && addressBar?.text.toString() == "kryptos://home") {
+                isUpdatingUrl = true
                 addressBar?.setText("")
+                isUpdatingUrl = false
             }
         }
 
@@ -499,6 +514,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnBookmark?.setOnClickListener {
+            // Fix: Block bookmarks in Incognito
+            if (TabManager.getActiveTab()?.isIncognito == true) {
+                Toast.makeText(this, "Cannot bookmark in Incognito Mode", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
             val currentUrl = webView.url
             val currentTitle = webView.title ?: "Untitled"
 
@@ -662,7 +683,9 @@ class MainActivity : AppCompatActivity() {
         dockController.hideDockAndShowPill()
 
         val defangedUrl = defangUrl(url)
+        isUpdatingUrl = true
         addressBar?.setText(defangedUrl)
+        isUpdatingUrl = false
         webView.loadUrl(defangedUrl)
     }
 
@@ -679,7 +702,9 @@ class MainActivity : AppCompatActivity() {
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
         bottomDock?.elevation = 12f
 
+        isUpdatingUrl = true
         addressBar?.setText("kryptos://home")
+        isUpdatingUrl = false
         progressBar?.visibility = View.GONE
         btnBookmark?.setImageResource(R.drawable.ic_star_empty)
         renderSpeedDials()
@@ -808,7 +833,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startCustomVoiceSearch() {
-        addressBar?.clearFocus()
+        addressBar?.clearFocus() // Fix: Remove focus to hide suggestions
         hideSuggestions()
 
         voiceSearchDialog = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen)
@@ -866,7 +891,9 @@ class MainActivity : AppCompatActivity() {
                 voiceSearchDialog?.dismiss()
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
+                    isUpdatingUrl = true
                     addressBar?.setText(matches[0])
+                    isUpdatingUrl = false
                     loadUrlOrSearch(matches[0])
                 }
             }
@@ -1032,9 +1059,12 @@ class MainActivity : AppCompatActivity() {
             }
             return false
         }
+        
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            isUpdatingUrl = true
             addressBar?.setText(if (url != "about:blank") url else "kryptos://home")
+            isUpdatingUrl = false
             errorContainer?.visibility = View.GONE
         }
 
@@ -1048,7 +1078,12 @@ class MainActivity : AppCompatActivity() {
 
                 val activeTab = TabManager.getActiveTab()
                 if (activeTab?.isIncognito != true) {
-                    dbHelper.addHistory(title, url)
+                    // Fix: Filter out search URLs so they don't show up in Speed Dial
+                    val lowerUrl = url.lowercase()
+                    val isSearch = lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search?") || lowerUrl.contains("?p=")
+                    if (!isSearch) {
+                        dbHelper.addHistory(title, url)
+                    }
                 }
 
                 if (bookmarkDb.isBookmarked(url)) {
@@ -1090,6 +1125,8 @@ class MainActivity : AppCompatActivity() {
             fullscreenContainer.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             fullscreenContainer.visibility = View.VISIBLE
             
+            // Fix: Force Landscape for video
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             hideUIForFullscreen()
         }
 
@@ -1102,6 +1139,8 @@ class MainActivity : AppCompatActivity() {
             customViewCallback?.onCustomViewHidden()
             customViewCallback = null
             
+            // Fix: Restore Portrait
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             showUIBackFromFullscreen()
         }
     }
