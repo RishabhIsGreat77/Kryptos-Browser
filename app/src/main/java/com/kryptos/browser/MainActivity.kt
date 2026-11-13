@@ -499,9 +499,9 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 2, 2, "History")
             popup.menu.add(0, 5, 5, "Bookmarks")
             popup.menu.add(0, 3, 3, themeText)
-            popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 8, 8, "Downloads")
+            popup.menu.add(0, 4, 4, "Settings")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -880,7 +880,7 @@ class MainActivity : AppCompatActivity() {
         }
         cookieManager.flush()
     }
-
+    
     private fun executeIncognitoKill() {
         try {
             webView.clearCache(true)
@@ -894,24 +894,21 @@ class MainActivity : AppCompatActivity() {
                 cookieManager.flush()
                 
                 Handler(Looper.getMainLooper()).postDelayed({
+                    val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
                     finishAffinity()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        finishAndRemoveTask()
-                    }
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        System.exit(0)
-                    }
+                    finishAndRemoveTask()
+                    // System.exit(0) is removed to prevent auto-restart
                 }, 300)
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            activityManager.appTasks.forEach { it.finishAndRemoveTask() }
             finishAffinity()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                finishAndRemoveTask()
-            }
+            finishAndRemoveTask()
         }
     }
-
     // ==========================================
     // LIFECYCLE METHODS
     // ==========================================
