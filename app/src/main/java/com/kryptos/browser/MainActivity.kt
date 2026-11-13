@@ -6,6 +6,7 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.Context
 import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -69,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bookmarkDb: BookmarkDatabaseHelper
     private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
+    private val normalCookiesBackup = mutableMapOf<String, String>()
 
     // Fullscreen & Immersive Variables
     private var customView: View? = null
@@ -511,6 +513,11 @@ class MainActivity : AppCompatActivity() {
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> { 
+                        // Backup Normal data if this is the first Incognito tab
+                        if (TabManager.tabsList.none { it.isIncognito }) {
+                            backupNormalCookies()
+                            clearAllCookies()
+                        }
                         val newTab = TabManager.addNewTab("kryptos://home", "Incognito Tab", true)
                         TabManager.setActiveTab(newTab.id)
                         showHomepageUI()
@@ -831,6 +838,42 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
     }
+        // Backup cookies of Normal tabs
+    private fun backupNormalCookies() {
+        normalCookiesBackup.clear()
+        val cookieManager = CookieManager.getInstance()
+        
+        // Backup for all currently open normal tabs
+        for (tab in TabManager.tabsList.filter { !it.isIncognito }) {
+            val cookie = cookieManager.getCookie(tab.url)
+            if (cookie != null) normalCookiesBackup[tab.url] = cookie
+        }
+        
+        // Backup for most common sites (just in case they are not in active tabs)
+        val commonSites = listOf("https://www.youtube.com", "https://github.com", "https://www.reddit.com", "https://www.google.com")
+        for (site in commonSites) {
+            val cookie = cookieManager.getCookie(site)
+            if (cookie != null) normalCookiesBackup[site] = cookie
+        }
+    }
+
+    // Clear all cookies and local storage
+    private fun clearAllCookies() {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies {
+            cookieManager.flush()
+        }
+        WebStorage.getInstance().deleteAllData()
+    }
+
+    // Restore cookies of Normal tabs
+    private fun restoreNormalCookies() {
+        val cookieManager = CookieManager.getInstance()
+        for ((url, cookie) in normalCookiesBackup) {
+            cookieManager.setCookie(url, cookie)
+        }
+        cookieManager.flush()
+    }
     private fun executeIncognitoKill() {
         try {
             // 1. Clear Cache and History
@@ -875,10 +918,26 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         
-        // NEW: Clear Incognito Data if the last Incognito tab was closed
+        // Check if we need to backup Normal tabs data before entering Incognito
+        if (prefs.getBoolean("backup_normal_data", false)) {
+            backupNormalCookies()
+            clearAllCookies()
+            prefs.edit().putBoolean("backup_normal_data", false).apply()
+        }
+
+        // Check if we need to wipe Incognito and restore Normal tabs data
         if (prefs.getBoolean("wipe_incognito_data", false)) {
-            clearIncognitoSessionData()
+            clearAllCookies()
+            restoreNormalCookies()
             prefs.edit().putBoolean("wipe_incognito_data", false).apply()
+            
+            // Reload active tab to apply restored cookies
+            val activeTab = TabManager.getActiveTab()
+            if (activeTab?.url == "kryptos://home") {
+                showHomepageUI()
+            } else {
+                loadUrlOrSearch(activeTab?.url ?: "kryptos://home")
+            }
         }
         
         updateTabCountUI()
