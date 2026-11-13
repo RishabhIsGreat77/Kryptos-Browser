@@ -695,6 +695,7 @@ class MainActivity : AppCompatActivity() {
             
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
+    }
     
 
     private fun checkAndClearCache() {
