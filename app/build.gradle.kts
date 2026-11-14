@@ -10,10 +10,10 @@ android {
     // NEW: Signing Config for permanent Keystore
     signingConfigs {
         create("release") {
-            storeFile = file("kryptos.jks.p12") // Tere file ka exact naam
-            storePassword = "kryptos123"        // Jo password tune website par dala tha
+            storeFile = file("kryptos.p12") // Tere file ka exact naam
+            storePassword = "Emberlog"        // Jo password tune website par dala tha
             keyAlias = "kryptos"                // Jo alias dala tha
-            keyPassword = "kryptos123"          // Jo password dala tha
+            keyPassword = "Emberlog"          // Jo password dala tha
         }
     }
 
@@ -21,8 +21,8 @@ android {
         applicationId = "com.kryptos.browser"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8       // Pehle jo tha usse +1 badha diya (jaise 7 se 8)
-        versionName = "5.0.1" // Pehle jo tha usse badha diya (jaise 5.0.0 se 5.0.1)
+        versionCode = 8 
+        versionName = "5.0.1" 
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
