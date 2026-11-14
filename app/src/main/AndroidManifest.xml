@@ -31,7 +31,6 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
-        <!-- Removed excludeFromRecents to prevent the whole task from hiding -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -47,6 +46,7 @@
             android:name=".MainActivity"
             android:exported="false"
             android:launchMode="singleTask"
+            android:stateNotNeeded="true"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity android:name=".SettingsActivity" android:exported="false" />
