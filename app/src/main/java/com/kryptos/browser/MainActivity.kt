@@ -951,10 +951,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun executeIncognitoKill() {
-        // Set the flag so SplashActivity wipes data on next open
-        prefs.edit().putBoolean("wipe_on_next_launch", true).apply()
+        // Use commit() instead of apply() to ensure it writes to disk immediately
+        prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
         
-        // Immediately remove from recents and close
         try {
             val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
             activityManager.appTasks.forEach { it.finishAndRemoveTask() }
@@ -987,6 +986,17 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(currentTab.url)
             }
         }
+        override fun onStop() {
+            super.onStop()
+            // Double check if screen is off and incognito kill is enabled
+            val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            if (!powerManager.isInteractive && prefs.getBoolean("incognito_kill", false)) {
+            // Only trigger if there are active incognito tabs
+            if (TabManager.tabsList.any { it.isIncognito }) {
+                executeIncognitoKill()
+            }
+        }
+    }
 
         val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
         if (isFullscreenEnabled && !isImmersiveMode) {
