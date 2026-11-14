@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     private var isKeyboardVisible = false
     private var currentSuggestions = mutableListOf<String>()
     private var isUpdatingUrl = false
+    private var isReaderMode = false
 
     private var lastFailedUrl: String? = null
     private lateinit var prefs: android.content.SharedPreferences
@@ -98,9 +99,7 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
 
-    // ==========================================
-    // INCOGNITO AUTO-KILL STATE & DETECTION
-    // ==========================================
+    // Incognito Auto-Kill State & Detection
     private val isWipingAndKilling = AtomicBoolean(false)
     private var userLeftViaHomeOrRecents = false
     private var isLaunchingInternalActivity = false
@@ -147,7 +146,6 @@ class MainActivity : AppCompatActivity() {
                     applySecureStateToActivity(activity)
                     val main = currentMainRef?.get()
                     if (main != null && activity !== main) {
-                        // Child activity (TabsActivity, SettingsActivity, etc.) is now visible
                         main.isLaunchingInternalActivity = false
                     }
                 }
@@ -225,7 +223,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
 
-        // Ensure incognito_kill is enabled even if an older build wrote false by default
         if (!prefs.getBoolean("incognito_kill_v2_fixed", false)) {
             prefs.edit()
                 .putBoolean("incognito_kill", true)
@@ -237,7 +234,6 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putBoolean("pending_incognito_exit", false).commit()
             intent?.removeExtra("from_splash")
         } else if (prefs.getBoolean("pending_incognito_exit", false)) {
-            // Block any OS auto-restart when unlocking the device after an incognito screen-off kill
             super.onCreate(null)
             window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
             abortAndRemoveTaskSilently()
@@ -287,7 +283,6 @@ class MainActivity : AppCompatActivity() {
             webView
         )
 
-        // Register DisplayListener for immediate screen state changes (STATE_OFF / DOZE / AOD)
         try {
             val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             dm.registerDisplayListener(displayListener, screenOffCheckHandler)
@@ -295,7 +290,6 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // Register BroadcastReceiver with RECEIVER_EXPORTED so OEM ROMs never block ACTION_SCREEN_OFF
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenOffReceiver, filter, Context.RECEIVER_EXPORTED)
@@ -316,8 +310,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Android calls onUserLeaveHint() ONLY when the user presses Home, switches apps,
-        // or starts another Activity — NEVER when the power button is pressed!
         userLeftViaHomeOrRecents = true
     }
 
@@ -384,7 +376,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun abortAndRemoveTaskSilently() {
-        // 1. Finish any open child activities (TabsActivity, SettingsActivity, etc.) first
         trackedActivities.mapNotNull { it.get() }.forEach { act ->
             if (act !== this && !act.isFinishing) {
                 try {
@@ -394,7 +385,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 2. Exclude and remove all AppTasks from Recent Apps
         try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             am.appTasks.forEach { task ->
@@ -405,8 +395,6 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // 3. Move task to back and finish root task (do NOT call finishAffinity() before
-        // finishAndRemoveTask(), as finishAffinity swallows FINISH_TASK_WITH_ROOT_ACTIVITY)
         try {
             moveTaskToBack(true)
         } catch (e: Exception) { }
@@ -808,6 +796,7 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 4, 4, "Settings")
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 8, 8, "Downloads")
+            popup.menu.add(0, 9, 9, "Reader Mode")
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -837,6 +826,10 @@ class MainActivity : AppCompatActivity() {
                         true
                     }
                     8 -> { startActivity(Intent(this, DownloadsActivity::class.java)); true }
+                    9 -> {
+                        toggleReaderMode()
+                        true
+                    }
                     else -> false
                 }
             }
@@ -1041,6 +1034,52 @@ class MainActivity : AppCompatActivity() {
         webView.reload()
     }
 
+    // ==========================================
+    // READER MODE LOGIC
+    // ==========================================
+    private fun toggleReaderMode() {
+        isReaderMode = !isReaderMode
+        
+        if (isReaderMode) {
+            val readerJS = """
+                (function() {
+                    var elementsToRemove = document.querySelectorAll('header, footer, nav, aside, .ad, .ads, .advertisement, .sidebar, script, iframe, noscript, [role="banner"], [role="navigation"]');
+                    for (var i = 0; i < elementsToRemove.length; i++) {
+                        elementsToRemove[i].style.display = 'none';
+                    }
+                    
+                    var body = document.body;
+                    body.style.backgroundColor = '#0B0B0D';
+                    body.style.color = '#FFFFFF';
+                    body.style.fontSize = '18px';
+                    body.style.lineHeight = '1.6';
+                    body.style.padding = '20px';
+                    body.style.maxWidth = '800px';
+                    body.style.margin = '0 auto';
+                    
+                    var images = document.querySelectorAll('img');
+                    for (var i = 0; i < images.length; i++) {
+                        images[i].style.maxWidth = '100%';
+                        images[i].style.height = 'auto';
+                        images[i].style.borderRadius = '8px';
+                    }
+                    
+                    var textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, span');
+                    for (var i = 0; i < textElements.length; i++) {
+                        textElements[i].style.color = '#FFFFFF';
+                        textElements[i].style.fontFamily = 'sans-serif';
+                    }
+                })();
+            """.trimIndent()
+            
+            webView.evaluateJavascript(readerJS, null)
+            Toast.makeText(this, "Reader Mode ON", Toast.LENGTH_SHORT).show()
+        } else {
+            webView.reload()
+            Toast.makeText(this, "Reader Mode OFF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun toggleImmersiveMode() {
         isImmersiveMode = !isImmersiveMode
         if (isImmersiveMode) {
@@ -1213,13 +1252,11 @@ class MainActivity : AppCompatActivity() {
 
         screenOffCheckHandler.removeCallbacksAndMessages(null)
 
-        // Synchronously persist exit and wipe flags
         prefs.edit()
             .putBoolean("wipe_on_next_launch", true)
             .putBoolean("pending_incognito_exit", true)
             .commit()
 
-        // Immediately clear in-memory tabs even before UI runnable
         TabManager.resetAllTabs()
 
         runOnUiThread {
@@ -1278,7 +1315,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Reset navigation tracking flags on clean foreground resume
         userLeftViaHomeOrRecents = false
         isLaunchingInternalActivity = false
         screenOffCheckHandler.removeCallbacksAndMessages(null)
@@ -1349,9 +1385,6 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
 
         if (shouldKillIncognito() && !isChangingConfigurations) {
-            // Instant 0ms Power Button Detection:
-            // If MainActivity stopped WITHOUT onUserLeaveHint() (Home/Recents) and WITHOUT
-            // launching a child Activity (Tabs/Settings/etc.), the Power Button was pressed!
             if (!userLeftViaHomeOrRecents && !isLaunchingInternalActivity) {
                 executeIncognitoKillNow()
                 return
