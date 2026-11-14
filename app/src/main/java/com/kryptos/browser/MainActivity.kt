@@ -19,6 +19,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -28,6 +29,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.webkit.CookieManager
 import android.webkit.URLUtil
@@ -48,6 +50,9 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URLEncoder
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : AppCompatActivity() {
 
@@ -88,6 +93,10 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
 
+    // Fix: Atomic Guards & Kill Flags
+    private val isWipingAndKilling = AtomicBoolean(false)
+    private var killProcessOnDestroy = false
+
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
         Pair("Bing", "https://www.bing.com/search?q="),
@@ -98,11 +107,15 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedEngineIndex = 0
     
+    // Fix: goAsync for BroadcastReceiver
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                if (prefs.getBoolean("incognito_kill", false)) {
-                    executeIncognitoKill()
+                if (prefs.getBoolean("incognito_kill", false) && TabManager.tabsList.any { it.isIncognito }) {
+                    val pendingResult = goAsync()
+                    executeIncognitoKillAsync {
+                        pendingResult.finish()
+                    }
                 }
             }
         }
@@ -160,6 +173,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateSecureFlag() {
+        val isIncognito = TabManager.getActiveTab()?.isIncognito == true
+        if (isIncognito) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(false)
+            }
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setRecentsScreenshotEnabled(true)
+            }
+        }
+    }
+
     private fun updateTrackerUI() {
         txtTrackerCount?.text = String.format("%,d", trackerCount)
     }
@@ -178,6 +206,7 @@ class MainActivity : AppCompatActivity() {
             incognitoIcon.visibility = View.GONE
             countTxt.text = TabManager.tabsList.size.toString()
         }
+        updateSecureFlag()
     }
 
     private fun setupSuggestions() {
@@ -947,19 +976,52 @@ class MainActivity : AppCompatActivity() {
         cookieManager.flush()
     }
 
-    private fun executeIncognitoKill() {
-        // Use commit() instead of apply() to ensure it writes to disk immediately
+    // STEP 3, 4, 5 & 6 Implementation
+    private fun executeIncognitoKillAsync(onComplete: () -> Unit = {}) {
+        if (isWipingAndKilling.getAndSet(true)) return // Atomic Guard
+
         prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
-        
-        try {
-            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-            finishAffinity()
-            finishAndRemoveTask()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            finishAffinity()
-        }
+
+        Thread {
+            try {
+                val cookieManager = CookieManager.getInstance()
+                val latch = CountDownLatch(1)
+                
+                // Clear cookies and wait
+                cookieManager.removeAllCookies {
+                    cookieManager.flush()
+                    latch.countDown()
+                }
+                // 800ms timeout fallback
+                latch.await(800, TimeUnit.MILLISECONDS)
+                
+                WebStorage.getInstance().deleteAllData()
+                dbHelper.clearHistory()
+                TabManager.tabsList.removeAll { it.isIncognito }
+            } catch (e: Exception) { 
+                e.printStackTrace() 
+            }
+            
+            runOnUiThread {
+                killProcessOnDestroy = true // STEP 7
+                try {
+                    // STEP 3: Only appTasks
+                    val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+                } catch (e: Exception) { 
+                    e.printStackTrace() 
+                }
+                
+                // STEP 5: Destroy WebView
+                try {
+                    val parent = webView.parent as? ViewGroup
+                    parent?.removeView(webView)
+                    webView.destroy()
+                } catch (e: Exception) {}
+                
+                onComplete() // Finish goAsync
+            }
+        }.start()
     }
 
     override fun onResume() {
@@ -1007,14 +1069,21 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         
-        // Double check if screen is off and incognito kill is enabled
-        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!powerManager.isInteractive && prefs.getBoolean("incognito_kill", false)) {
-            // Only trigger if there are active incognito tabs
             if (TabManager.tabsList.any { it.isIncognito }) {
-                executeIncognitoKill()
+                executeIncognitoKillAsync()
             }
         }
+    }
+
+    // STEP 5: Prevent state saving
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (TabManager.getActiveTab()?.isIncognito == true || isWipingAndKilling.get()) {
+            outState.clear()
+            return
+        }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -1025,8 +1094,16 @@ class MainActivity : AppCompatActivity() {
         TabManager.tabsList.removeAll { it.isIncognito }
         speechRecognizer?.destroy()
 
-        if (this::webView.isInitialized) webView.destroy()
+        if (this::webView.isInitialized && !webView.isDestroyed) {
+            webView.destroy()
+        }
+        
         super.onDestroy()
+        
+        // STEP 7: Kill process only in onDestroy
+        if (killProcessOnDestroy) {
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
     }
 
     inner class KryptosWebViewClient : WebViewClient() {
@@ -1047,23 +1124,13 @@ class MainActivity : AppCompatActivity() {
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val url = request?.url.toString()
             
-            // Expanded list of safe download extensions
             val downloadExtensions = listOf(
-                // Android & Packages
-                ".apk", ".aab", ".xapk",
-                // Archives & Compressed
-                ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz",
-                // Documents
+                ".apk", ".aab", ".xapk", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz",
                 ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf", ".odt",
-                // Images
                 ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".tiff", ".heic",
-                // Videos
                 ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".3gp",
-                // Audio
                 ".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a", ".opus",
-                // Executables & Software
                 ".exe", ".msi", ".dmg", ".iso", ".bin",
-                // E-books & Other
                 ".epub", ".mobi", ".azw3", ".torrent", ".ttf", ".otf", ".woff", ".woff2"
             )
             
@@ -1093,7 +1160,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             
-            // Link Defanger
             val defangedUrl = defangUrl(url)
             if (url != defangedUrl) {
                 view?.loadUrl(defangedUrl)
