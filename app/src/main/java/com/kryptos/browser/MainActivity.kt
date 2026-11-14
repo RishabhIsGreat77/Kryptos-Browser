@@ -995,11 +995,33 @@ class MainActivity : AppCompatActivity() {
     private fun executeIncognitoKillNow() {
         if (!isWipingAndKilling.compareAndSet(false, true)) return
 
+        // 1. Set flag for SplashActivity
         prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
 
+        // 2. UI Masking (Hide everything immediately)
         try {
+            window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
             if (this::webView.isInitialized) {
                 webView.visibility = View.GONE
+            }
+        } catch (e: Exception) {}
+
+        // 3. FORCE REMOVE FROM RECENTS (Must be done synchronously)
+        try {
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.appTasks.forEach { task ->
+                task.setExcludeFromRecents(true)
+                task.finishAndRemoveTask()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        finishAndRemoveTask()
+        moveTaskToBack(true)
+
+        // 4. Clear Data
+        try {
+            if (this::webView.isInitialized) {
                 webView.stopLoading()
                 webView.loadUrl("about:blank")
                 webView.clearHistory()
@@ -1008,30 +1030,17 @@ class MainActivity : AppCompatActivity() {
                 (webView.parent as? ViewGroup)?.removeView(webView)
                 webView.destroy()
             }
-        } catch (e: Exception) { e.printStackTrace() }
-
-        try {
             val cookieManager = CookieManager.getInstance()
             cookieManager.removeAllCookies { cookieManager.flush() }
             cookieManager.flush()
             WebStorage.getInstance().deleteAllData()
-        } catch (e: Exception) { e.printStackTrace() }
-
-        try {
             dbHelper.clearHistory()
             TabManager.clearIncognitoTabs()
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
-        try {
-            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            activityManager.appTasks.forEach { task ->
-                task.setExcludeFromRecents(true)
-                task.finishAndRemoveTask()
-            }
-        } catch (e: Exception) { e.printStackTrace() }
-        
-        finishAndRemoveTask()
-
+        // 5. Kill Process after 400ms
         Handler(Looper.getMainLooper()).postDelayed({
             android.os.Process.killProcess(android.os.Process.myPid())
             exitProcess(0)
