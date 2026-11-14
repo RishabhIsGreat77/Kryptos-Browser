@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.app.Dialog
 import android.app.DownloadManager
-import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -94,7 +93,6 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
 
-    // Incognito Auto-Kill Variables
     private val isWipingAndKilling = AtomicBoolean(false)
 
     private val searchEngines = listOf(
@@ -106,27 +104,20 @@ class MainActivity : AppCompatActivity() {
         Pair("Ecosia", "https://www.ecosia.org/search?q=")
     )
     private var selectedEngineIndex = 0
-    
+
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                 if (shouldKillIncognito()) {
-                    // Mask screen immediately
-                    runOnUiThread {
-                        window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
-                        if (this@MainActivity::webView.isInitialized) {
-                            webView.visibility = View.INVISIBLE
-                        }
-                    }
-                    isWipingAndKilling.set(true) 
+                    killIncognitoAndExit()
                 }
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
+        super.onCreate(if (TabManager.hasIncognitoTabs()) null else savedInstanceState)
         setContentView(R.layout.activity_main)
 
         dbHelper = HistoryDatabaseHelper(this)
@@ -160,27 +151,20 @@ class MainActivity : AppCompatActivity() {
         renderSpeedDials()
         checkAndClearCache()
 
-        dockController = DockController(
-            this, 
-            bottomDock!!, 
-            findViewById(R.id.pill_container), 
-            findViewById(R.id.pill_view), 
-            webView
-        )
+        dockController = DockController(this, bottomDock!!, findViewById(R.id.pill_container), findViewById(R.id.pill_view), webView)
 
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(screenOffReceiver, filter)
         }
     }
 
     private fun shouldKillIncognito(): Boolean {
-        return prefs.getBoolean("incognito_kill", false) && TabManager.hasIncognitoTabs()
+        return prefs.getBoolean("incognito_kill", true) && TabManager.hasIncognitoTabs()
     }
 
-    // Fix: Hide task from recents immediately if Incognito tab is active
     fun updateSecureFlag() {
         val hasIncognito = TabManager.hasIncognitoTabs()
         if (hasIncognito) {
@@ -188,33 +172,58 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 setRecentsScreenshotEnabled(false)
             }
-            setTaskExcludedFromRecents(true)
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 setRecentsScreenshotEnabled(true)
             }
-            setTaskExcludedFromRecents(false)
         }
     }
 
-    private fun setTaskExcludedFromRecents(exclude: Boolean) {
-        try {
-            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            am.appTasks.forEach { it.setExcludeFromRecents(exclude) }
-        } catch (e: Exception) {
-            e.printStackTrace()
+    // MAGIC FIX: This triggers exactly when the user presses Power button or Home button
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        
+        // If user is leaving the app and screen is turning off
+        if (!powerManager.isInteractive && shouldKillIncognito()) {
+            killIncognitoAndExit()
         }
+    }
+
+    private fun killIncognitoAndExit() {
+        if (!isWipingAndKilling.compareAndSet(false, true)) return
+
+        // Set flag so SplashActivity wipes data and redirects to Home Screen
+        prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
+
+        try {
+            // Hide UI to prevent screenshot in recents
+            window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            if (this::webView.isInitialized) webView.visibility = View.INVISIBLE
+            
+            // Force remove from Recents
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+        } catch (e: Exception) { }
+
+        finishAndRemoveTask()
+        
+        // Kill process after a slight delay to let TaskManager finish its job
+        Handler(Looper.getMainLooper()).postDelayed({
+            android.os.Process.killProcess(android.os.Process.myPid())
+            exitProcess(0)
+        }, 200)
     }
 
     private fun updateTrackerUI() {
         txtTrackerCount?.text = String.format("%,d", trackerCount)
     }
-    
+
     private fun updateTabCountUI() {
         val countTxt = findViewById<TextView>(R.id.txt_tab_count)
         val incognitoIcon = findViewById<ImageView>(R.id.img_incognito_icon)
-        
+
         val activeTab = TabManager.getActiveTab()
 
         if (activeTab?.isIncognito == true) {
@@ -234,10 +243,10 @@ class MainActivity : AppCompatActivity() {
                 val view = super.getView(position, convertView, parent)
                 val txtSuggestion = view.findViewById<TextView>(R.id.txt_suggestion)
                 val btnArrow = view.findViewById<ImageView>(R.id.btn_arrow_paste)
-                
+
                 val item = getItem(position)
                 txtSuggestion.text = item
-                
+
                 view.setOnClickListener {
                     isUpdatingUrl = true
                     addressBar?.setText(item)
@@ -264,7 +273,7 @@ class MainActivity : AppCompatActivity() {
             val screenHeight = rootView.height
             val keypadHeight = screenHeight - r.bottom
             val newKeyboardState = keypadHeight > screenHeight * 0.15
-            
+
             if (isKeyboardVisible != newKeyboardState) {
                 isKeyboardVisible = newKeyboardState
                 if (addressBar?.hasFocus() == true && suggestionsList?.visibility == View.VISIBLE) {
@@ -277,7 +286,7 @@ class MainActivity : AppCompatActivity() {
         addressBar?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            
+
             override fun afterTextChanged(s: Editable?) {
                 if (isUpdatingUrl) return
                 val query = s.toString().trim()
@@ -312,14 +321,14 @@ class MainActivity : AppCompatActivity() {
                     connection.doInput = true
                     connection.connect()
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    
+
                     val jsonArray = org.json.JSONArray(response)
                     val suggestionsArray = jsonArray.getJSONArray(1)
                     currentSuggestions.clear()
                     for (i in 0 until suggestionsArray.length()) {
                         currentSuggestions.add(suggestionsArray.getString(i))
                     }
-                    
+
                     runOnUiThread {
                         val limit = if (isKeyboardVisible) 4 else 8
                         updateSuggestionsView(currentSuggestions, limit)
@@ -360,12 +369,12 @@ class MainActivity : AppCompatActivity() {
         finalDials.add(HistoryItem("YouTube", "https://youtube.com", 0L))
 
         val searchDomains = listOf("google.com", "bing.com", "duckduckgo.com", "search.brave.com", "yahoo.com", "ecosia.org")
-        
+
         val dynamicDials = dbHelper.getMostVisitedSites(50).filter {
             val lowerUrl = it.url.lowercase()
             val isHardcoded = lowerUrl.contains("github.com") || lowerUrl.contains("reddit.com") || lowerUrl.contains("youtube.com")
-            val isSearch = searchDomains.any { domain -> 
-                lowerUrl.contains(domain) && (lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search") || lowerUrl.contains("?p=")) 
+            val isSearch = searchDomains.any { domain ->
+                lowerUrl.contains(domain) && (lowerUrl.contains("?q=") || lowerUrl.contains("&q=") || lowerUrl.contains("/search") || lowerUrl.contains("?p="))
             }
             !isHardcoded && !isSearch
         }
@@ -446,7 +455,7 @@ class MainActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            dbHelper.removeHistoryForUrl(dial.url) 
+            dbHelper.removeHistoryForUrl(dial.url)
             renderSpeedDials()
             Toast.makeText(this, "Removed from Speed Dial", Toast.LENGTH_SHORT).show()
         }
@@ -478,7 +487,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) { }
         }.start()
     }
-    
+
     private fun defangUrl(url: String): String {
         if (!url.startsWith("http://") && !url.startsWith("https://")) return url
         try {
@@ -561,7 +570,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Cannot bookmark in Incognito Mode", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            
+
             val currentUrl = webView.url
             val currentTitle = webView.title ?: "Untitled"
 
@@ -604,7 +613,7 @@ class MainActivity : AppCompatActivity() {
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    1 -> { 
+                    1 -> {
                         if (TabManager.tabsList.none { it.isIncognito }) {
                             backupNormalCookies()
                             clearAllCookies()
@@ -614,7 +623,7 @@ class MainActivity : AppCompatActivity() {
                         showHomepageUI()
                         updateTabCountUI()
                         Toast.makeText(this, "Incognito Tab Opened", Toast.LENGTH_SHORT).show()
-                        true 
+                        true
                     }
                     2 -> { startActivity(Intent(this, HistoryActivity::class.java)); true }
                     5 -> { startActivity(Intent(this, BookmarksActivity::class.java)); true }
@@ -625,10 +634,7 @@ class MainActivity : AppCompatActivity() {
                         recreate(); true
                     }
                     4 -> { startActivity(Intent(this, SettingsActivity::class.java)); true }
-                    6 -> {
-                        toggleDesktopMode()
-                        true
-                    }
+                    6 -> { toggleDesktopMode(); true }
                     8 -> { startActivity(Intent(this, DownloadsActivity::class.java)); true }
                     else -> false
                 }
@@ -649,17 +655,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (customView != null) {
-                    return
-                }
-                if (isImmersiveMode) {
-                    toggleImmersiveMode()
-                    return
-                }
-                if (suggestionsList?.visibility == View.VISIBLE) {
-                    hideSuggestions()
-                    return
-                }
+                if (customView != null) return
+                if (isImmersiveMode) { toggleImmersiveMode(); return }
+                if (suggestionsList?.visibility == View.VISIBLE) { hideSuggestions(); return }
                 if (homepageContainer?.visibility == View.VISIBLE) return
                 if (webView.canGoBack()) webView.goBack() else showHomepageUI()
             }
@@ -692,8 +690,7 @@ class MainActivity : AppCompatActivity() {
             dbHelper.clearHistory()
             bookmarkDb.clearBookmarks()
 
-            TabManager.tabsList.clear()
-            TabManager.addNewTab("kryptos://home", "Home", false)
+            TabManager.resetAllTabs()
             updateTabCountUI()
             showHomepageUI()
             renderSpeedDials()
@@ -738,7 +735,7 @@ class MainActivity : AppCompatActivity() {
         TabManager.updateActiveTabTitle("Home", "kryptos://home")
         homepageContainer?.visibility = View.VISIBLE
         errorContainer?.visibility = View.GONE
-        
+
         dockController.setHomePage(true)
 
         bottomDock?.setBackgroundResource(R.drawable.bg_bottom_dock)
@@ -778,13 +775,13 @@ class MainActivity : AppCompatActivity() {
             request.setTitle(fileName)
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-            
+
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
-            
+
             val fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + fileName
             downloadDb.addDownload(fileName, url, fullPath)
-            
+
             Toast.makeText(this, "Download Started...", Toast.LENGTH_SHORT).show()
         }
 
@@ -849,14 +846,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.top_bar).visibility = View.GONE
         findViewById<View>(R.id.progress_bar).visibility = View.GONE
         bottomDock?.visibility = View.GONE
-        
-        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY 
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE 
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION 
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN 
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION 
+
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
-        
+
         dockController.setHomePage(false)
         dockController.hideDockAndShowPill()
     }
@@ -865,7 +862,7 @@ class MainActivity : AppCompatActivity() {
         isImmersiveMode = false
         findViewById<View>(R.id.top_bar).visibility = View.VISIBLE
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-        
+
         if (homepageContainer?.visibility == View.VISIBLE) {
             dockController.setHomePage(true)
             bottomDock?.visibility = View.VISIBLE
@@ -883,7 +880,7 @@ class MainActivity : AppCompatActivity() {
         voiceSearchDialog?.requestWindowFeature(Window.FEATURE_NO_TITLE)
         voiceSearchDialog?.setContentView(R.layout.dialog_voice_search)
         voiceSearchDialog?.setCancelable(false)
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             voiceSearchDialog?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         }
@@ -966,12 +963,12 @@ class MainActivity : AppCompatActivity() {
     private fun backupNormalCookies() {
         normalCookiesBackup.clear()
         val cookieManager = CookieManager.getInstance()
-        
+
         for (tab in TabManager.tabsList.filter { !it.isIncognito }) {
             val cookie = cookieManager.getCookie(tab.url)
             if (cookie != null) normalCookiesBackup[tab.url] = cookie
         }
-        
+
         val commonSites = listOf("https://www.youtube.com", "https://github.com", "https://www.reddit.com", "https://www.google.com")
         for (site in commonSites) {
             val cookie = cookieManager.getCookie(site)
@@ -995,65 +992,8 @@ class MainActivity : AppCompatActivity() {
         cookieManager.flush()
     }
 
-    // ==========================================
-    // INCOGNITO AUTO-KILL (Ultimate Fix)
-    // ==========================================
-    private fun executeIncognitoKillNow() {
-        if (!isWipingAndKilling.get()) return 
-
-        prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
-
-        try {
-            if (this::webView.isInitialized) {
-                webView.visibility = View.GONE
-                webView.stopLoading()
-                webView.loadUrl("about:blank")
-                webView.clearHistory()
-                webView.clearFormData()
-                webView.clearCache(true)
-                (webView.parent as? ViewGroup)?.removeView(webView)
-                webView.destroy()
-            }
-            val cookieManager = CookieManager.getInstance()
-            cookieManager.removeAllCookies { cookieManager.flush() }
-            cookieManager.flush()
-            WebStorage.getInstance().deleteAllData()
-            dbHelper.clearHistory()
-            TabManager.clearIncognitoTabs()
-        } catch (e: Exception) { e.printStackTrace() }
-
-        try {
-            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            activityManager.appTasks.forEach { task ->
-                task.setExcludeFromRecents(true)
-                task.finishAndRemoveTask()
-            }
-        } catch (e: Exception) { e.printStackTrace() }
-        
-        finishAndRemoveTask()
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            android.os.Process.killProcess(android.os.Process.myPid())
-            exitProcess(0)
-        }, 400)
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Failsafe: If kill was triggered while screen was off
-        if (isWipingAndKilling.get()) {
-            executeIncognitoKillNow()
-            return
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-        
-        if (isWipingAndKilling.get()) {
-            executeIncognitoKillNow()
-            return
-        }
 
         if (prefs.getBoolean("backup_normal_data", false)) {
             backupNormalCookies()
@@ -1065,7 +1005,7 @@ class MainActivity : AppCompatActivity() {
             clearAllCookies()
             restoreNormalCookies()
             prefs.edit().putBoolean("wipe_incognito_data", false).apply()
-            
+
             val currentTab = TabManager.getActiveTab()
             if (currentTab?.url == "kryptos://home") {
                 showHomepageUI()
@@ -1085,10 +1025,10 @@ class MainActivity : AppCompatActivity() {
         } else if (!isFullscreenEnabled && isImmersiveMode) {
             showUIBackFromFullscreen()
         }
-        
+
         updateTabCountUI()
         renderSpeedDials()
-        
+
         val activeTab = TabManager.getActiveTab()
         if (activeTab != null) {
             if (activeTab.url == "kryptos://home") {
@@ -1106,24 +1046,7 @@ class MainActivity : AppCompatActivity() {
                 webView.visibility = View.INVISIBLE
             }
         }
-
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!powerManager.isInteractive && shouldKillIncognito()) {
-            executeIncognitoKillNow()
-        }
-
         super.onPause()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-
-        if ((!powerManager.isInteractive || keyguardManager.isKeyguardLocked) && shouldKillIncognito()) {
-            executeIncognitoKillNow()
-        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1139,21 +1062,21 @@ class MainActivity : AppCompatActivity() {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
 
-        TabManager.tabsList.removeAll { it.isIncognito }
+        TabManager.clearIncognitoTabs()
         speechRecognizer?.destroy()
 
         if (this::webView.isInitialized) {
             try {
                 (webView.parent as? ViewGroup)?.removeView(webView)
                 webView.destroy()
-            } catch (e: Exception) {}
+            } catch (e: Exception) { }
         }
-        
+
         super.onDestroy()
     }
 
     inner class KryptosWebViewClient : WebViewClient() {
-        
+
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
             for (domain in TrackerList.blockedDomains) {
@@ -1166,10 +1089,10 @@ class MainActivity : AppCompatActivity() {
             }
             return super.shouldInterceptRequest(view, request)
         }
-        
+
         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
             val url = request?.url.toString()
-            
+
             val downloadExtensions = listOf(
                 ".apk", ".aab", ".xapk", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz",
                 ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf", ".odt",
@@ -1179,9 +1102,9 @@ class MainActivity : AppCompatActivity() {
                 ".exe", ".msi", ".dmg", ".iso", ".bin",
                 ".epub", ".mobi", ".azw3", ".torrent", ".ttf", ".otf", ".woff", ".woff2"
             )
-            
+
             val isDownload = downloadExtensions.any { url.lowercase().endsWith(it) } || url.contains("release-assets.githubusercontent.com")
-            
+
             if (isDownload) {
                 try {
                     val fileName = URLUtil.guessFileName(url, null, null)
@@ -1192,20 +1115,20 @@ class MainActivity : AppCompatActivity() {
                     dmRequest.setTitle(fileName)
                     dmRequest.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     dmRequest.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                    
+
                     val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                     dm.enqueue(dmRequest)
-                    
+
                     val fullPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath + "/" + fileName
                     downloadDb.addDownload(fileName, url, fullPath)
-                    
+
                     Toast.makeText(this@MainActivity, "Download Started...", Toast.LENGTH_SHORT).show()
                     return true
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
-            
+
             val defangedUrl = defangUrl(url)
             if (url != defangedUrl) {
                 view?.loadUrl(defangedUrl)
@@ -1213,7 +1136,7 @@ class MainActivity : AppCompatActivity() {
             }
             return false
         }
-        
+
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             isUpdatingUrl = true
@@ -1273,11 +1196,11 @@ class MainActivity : AppCompatActivity() {
             }
             customView = view
             customViewCallback = callback
-            
+
             val fullscreenContainer = findViewById<FrameLayout>(R.id.fullscreen_container)
             fullscreenContainer.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             fullscreenContainer.visibility = View.VISIBLE
-            
+
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             hideUIForFullscreen()
         }
@@ -1290,7 +1213,7 @@ class MainActivity : AppCompatActivity() {
             customView = null
             customViewCallback?.onCustomViewHidden()
             customViewCallback = null
-            
+
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             showUIBackFromFullscreen()
         }
