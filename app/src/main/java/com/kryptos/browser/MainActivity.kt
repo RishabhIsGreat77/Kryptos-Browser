@@ -1085,7 +1085,6 @@ class MainActivity : AppCompatActivity() {
         }
         super.onSaveInstanceState(outState)
     }
-
     override fun onDestroy() {
         try {
             unregisterReceiver(screenOffReceiver)
@@ -1094,7 +1093,7 @@ class MainActivity : AppCompatActivity() {
         TabManager.tabsList.removeAll { it.isIncognito }
         speechRecognizer?.destroy()
 
-        if (this::webView.isInitialized && !webView.isDestroyed) {
+        if (this::webView.isInitialized) {
             webView.destroy()
         }
         
