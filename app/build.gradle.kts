@@ -10,7 +10,7 @@ android {
     // Signing Config using GitHub Secrets (No plain text passwords)
     signingConfigs {
         create("release") {
-            storeFile = file("kryptos.jks.p12") // Tere file ka exact naam
+            storeFile = file("kryptos.p12") // Tere file ka exact naam
             storePassword = System.getenv("KEYSTORE_PASS")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASS")
