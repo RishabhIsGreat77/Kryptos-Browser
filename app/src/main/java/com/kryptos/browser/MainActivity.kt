@@ -797,6 +797,12 @@ class MainActivity : AppCompatActivity() {
             popup.menu.add(0, 6, 6, "Desktop Site")
             popup.menu.add(0, 8, 8, "Downloads")
             popup.menu.add(0, 9, 9, "Reader Mode")
+            
+            // Ad-Blocker Whitelist Logic
+            val currentDomain = Uri.parse(webView.url ?: "").host ?: ""
+            val isWhitelisted = prefs.getStringSet("adblock_whitelist", mutableSetOf())?.contains(currentDomain) == true
+            val blockerText = if (isWhitelisted) "Enable Ad-Blocker" else "Disable Ad-Blocker"
+            popup.menu.add(0, 10, 10, blockerText)
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -828,6 +834,10 @@ class MainActivity : AppCompatActivity() {
                     8 -> { startActivity(Intent(this, DownloadsActivity::class.java)); true }
                     9 -> {
                         toggleReaderMode()
+                        true
+                    }
+                    10 -> {
+                        toggleAdBlocker()
                         true
                     }
                     else -> false
@@ -1035,7 +1045,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // READER MODE LOGIC
+    // READER MODE & AD-BLOCKER LOGIC
     // ==========================================
     private fun toggleReaderMode() {
         isReaderMode = !isReaderMode
@@ -1077,6 +1087,30 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.reload()
             Toast.makeText(this, "Reader Mode OFF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun toggleAdBlocker() {
+        val currentUrl = webView.url
+        if (currentUrl == null || currentUrl == "about:blank" || currentUrl.startsWith("kryptos://")) {
+            Toast.makeText(this, "Cannot disable blocker on this page", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val domain = Uri.parse(currentUrl).host
+        if (domain != null) {
+            val whitelist = prefs.getStringSet("adblock_whitelist", mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+            
+            if (whitelist.contains(domain)) {
+                whitelist.remove(domain)
+                Toast.makeText(this, "Ad-Blocker Enabled for $domain", Toast.LENGTH_SHORT).show()
+            } else {
+                whitelist.add(domain)
+                Toast.makeText(this, "Ad-Blocker Disabled for $domain", Toast.LENGTH_SHORT).show()
+            }
+            
+            prefs.edit().putStringSet("adblock_whitelist", whitelist).apply()
+            webView.reload() 
         }
     }
 
@@ -1434,12 +1468,18 @@ class MainActivity : AppCompatActivity() {
 
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url.toString().lowercase()
-            for (domain in TrackerList.blockedDomains) {
-                if (url.contains(domain)) {
-                    trackerCount++
-                    prefs.edit().putInt("tracker_count", trackerCount).apply()
-                    runOnUiThread { updateTrackerUI() }
-                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
+            
+            val currentDomain = Uri.parse(webView.url ?: "").host ?: ""
+            val whitelist = prefs.getStringSet("adblock_whitelist", mutableSetOf()) ?: mutableSetOf()
+            
+            if (!whitelist.contains(currentDomain)) {
+                for (domain in TrackerList.blockedDomains) {
+                    if (url.contains(domain)) {
+                        trackerCount++
+                        prefs.edit().putInt("tracker_count", trackerCount).apply()
+                        runOnUiThread { updateTrackerUI() }
+                        return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream("".toByteArray()))
+                    }
                 }
             }
             return super.shouldInterceptRequest(view, request)
