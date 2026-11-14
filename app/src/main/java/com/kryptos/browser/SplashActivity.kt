@@ -21,12 +21,14 @@ class SplashActivity : AppCompatActivity() {
         if (isDark) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
+        // User explicitly launched the app via Launcher icon: clear the lock-screen kill guard
+        prefs.edit().putBoolean("pending_incognito_exit", false).commit()
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
         if (prefs.getBoolean("wipe_on_next_launch", false)) {
             try {
-                // 1. Clear Data
                 val tempWebView = WebView(this)
                 tempWebView.clearCache(true)
                 tempWebView.clearHistory()
@@ -43,24 +45,15 @@ class SplashActivity : AppCompatActivity() {
                 dbHelper.clearHistory()
 
                 TabManager.resetAllTabs()
+
                 tempWebView.destroy()
 
                 prefs.edit().putBoolean("wipe_on_next_launch", false).commit()
-
-                // 2. Redirect to Home Screen instead of opening browser
-                val homeIntent = Intent(Intent.ACTION_MAIN)
-                homeIntent.addCategory(Intent.CATEGORY_HOME)
-                homeIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(homeIntent)
-                finish()
-                return // Stop execution here
-
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
-        // Normal Flow
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
