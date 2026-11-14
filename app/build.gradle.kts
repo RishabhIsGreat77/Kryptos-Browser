@@ -7,13 +7,13 @@ android {
     namespace = "com.kryptos.browser"
     compileSdk = 34
 
-    // NEW: Signing Config for permanent Keystore
+    // Signing Config using GitHub Secrets (No plain text passwords)
     signingConfigs {
         create("release") {
-            storeFile = file("kryptos.p12") // Tere file ka exact naam
-            storePassword = "Emberlog"        // Jo password tune website par dala tha
-            keyAlias = "kryptos"                // Jo alias dala tha
-            keyPassword = "Emberlog"          // Jo password dala tha
+            storeFile = file("kryptos.jks.p12") // Tere file ka exact naam
+            storePassword = System.getenv("KEYSTORE_PASS")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASS")
         }
     }
 
@@ -21,8 +21,8 @@ android {
         applicationId = "com.kryptos.browser"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8 
-        versionName = "5.0.1" 
+        versionCode = 8       // Har naye release pe isko +1 badhana
+        versionName = "5.0.1" // Har naye release pe isko update karna
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,11 +34,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // NEW: Apply the signing config to release
             signingConfig = signingConfigs.getByName("release")
         }
         debug {
-            // NEW: Apply the same signing config to debug so GitHub Actions uses it
+            // Debug build pe bhi yahi signature use hoga
             signingConfig = signingConfigs.getByName("release")
         }
     }
