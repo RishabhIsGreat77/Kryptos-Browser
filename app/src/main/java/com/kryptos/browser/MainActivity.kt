@@ -1116,9 +1116,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        // अगर स्क्रीन बंद हो चुकी है और इनकॉग्निटो टैब एक्टिव है, तो तुरंत किल करो
         if (!powerManager.isInteractive && shouldKillIncognito()) {
             executeIncognitoKillNow()
         }
+
+        super.onPause()
+    }
+    val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+    if (!powerManager.isInteractive && shouldKillIncognito()) {
+        executeIncognitoKillNow()
+    }
 
         super.onPause()
     }
