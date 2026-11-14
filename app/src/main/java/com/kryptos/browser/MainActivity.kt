@@ -17,6 +17,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +30,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Display
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -96,22 +98,40 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
 
-    // Incognito Auto-Kill State
+    // ==========================================
+    // INCOGNITO AUTO-KILL STATE & DETECTION
+    // ==========================================
     private val isWipingAndKilling = AtomicBoolean(false)
+    private var userLeftViaHomeOrRecents = false
+    private var isLaunchingInternalActivity = false
     private val screenOffCheckHandler = Handler(Looper.getMainLooper())
-    private val delayedScreenOffCheck = Runnable {
-        if (isScreenOffOrLocked() && shouldKillIncognito()) {
-            executeIncognitoKillNow()
+    private val pollDelays = longArrayOf(100L, 250L, 500L, 850L, 1300L)
+
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) {}
+        override fun onDisplayRemoved(displayId: Int) {}
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == Display.DEFAULT_DISPLAY) {
+                if (!isDisplayOn() && shouldKillIncognito()) {
+                    executeIncognitoKillNow()
+                }
+            }
         }
     }
 
     companion object {
         private val trackedActivities = mutableListOf<WeakReference<Activity>>()
+        private var currentMainRef: WeakReference<MainActivity>? = null
         private var lifecycleCallbacksRegistered = false
 
-        private fun registerActivityTracker(app: Application, mainRef: WeakReference<MainActivity>) {
+        private fun registerActivityTracker(app: Application, mainActivity: MainActivity) {
+            currentMainRef = WeakReference(mainActivity)
+            trackedActivities.removeAll { it.get() == null || it.get() == mainActivity }
+            trackedActivities.add(WeakReference(mainActivity))
+
             if (lifecycleCallbacksRegistered) return
             lifecycleCallbacksRegistered = true
+
             app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                     trackedActivities.removeAll { it.get() == null || it.get() == activity }
@@ -125,26 +145,30 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onActivityResumed(activity: Activity) {
                     applySecureStateToActivity(activity)
+                    val main = currentMainRef?.get()
+                    if (main != null && activity !== main) {
+                        // Child activity (TabsActivity, SettingsActivity, etc.) is now visible
+                        main.isLaunchingInternalActivity = false
+                    }
                 }
 
                 override fun onActivityPaused(activity: Activity) {
                     if (TabManager.hasIncognitoTabs()) {
                         activity.window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
                     }
-                    val main = mainRef.get()
+                    val main = currentMainRef?.get()
                     if (main != null && main.isScreenOffOrLocked() && main.shouldKillIncognito()) {
                         main.executeIncognitoKillNow()
                     }
                 }
 
                 override fun onActivityStopped(activity: Activity) {
-                    val main = mainRef.get()
+                    val main = currentMainRef?.get()
                     if (main != null && main.shouldKillIncognito()) {
                         if (main.isScreenOffOrLocked()) {
                             main.executeIncognitoKillNow()
                         } else {
-                            main.screenOffCheckHandler.removeCallbacks(main.delayedScreenOffCheck)
-                            main.screenOffCheckHandler.postDelayed(main.delayedScreenOffCheck, 250L)
+                            main.scheduleScreenOffPolls()
                         }
                     }
                 }
@@ -200,8 +224,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         prefs = getSharedPreferences("kryptos_prefs", Context.MODE_PRIVATE)
-        if (!prefs.contains("incognito_kill")) {
-            prefs.edit().putBoolean("incognito_kill", true).commit()
+
+        // Ensure incognito_kill is enabled even if an older build wrote false by default
+        if (!prefs.getBoolean("incognito_kill_v2_fixed", false)) {
+            prefs.edit()
+                .putBoolean("incognito_kill", true)
+                .putBoolean("incognito_kill_v2_fixed", true)
+                .commit()
         }
 
         if (intent?.getBooleanExtra("from_splash", false) == true) {
@@ -216,7 +245,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(if (TabManager.hasIncognitoTabs()) null else savedInstanceState)
-        registerActivityTracker(application, WeakReference(this))
+        registerActivityTracker(application, this)
         setContentView(R.layout.activity_main)
 
         dbHelper = HistoryDatabaseHelper(this)
@@ -258,9 +287,18 @@ class MainActivity : AppCompatActivity() {
             webView
         )
 
+        // Register DisplayListener for immediate screen state changes (STATE_OFF / DOZE / AOD)
+        try {
+            val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            dm.registerDisplayListener(displayListener, screenOffCheckHandler)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Register BroadcastReceiver with RECEIVER_EXPORTED so OEM ROMs never block ACTION_SCREEN_OFF
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             registerReceiver(screenOffReceiver, filter)
         }
@@ -276,15 +314,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Android calls onUserLeaveHint() ONLY when the user presses Home, switches apps,
+        // or starts another Activity — NEVER when the power button is pressed!
+        userLeftViaHomeOrRecents = true
+    }
+
+    override fun startActivity(intent: Intent?) {
+        isLaunchingInternalActivity = true
+        super.startActivity(intent)
+    }
+
     private fun shouldKillIncognito(): Boolean {
-        // Default must be true to match SettingsActivity's default switch state
         return prefs.getBoolean("incognito_kill", true) && TabManager.hasIncognitoTabs()
+    }
+
+    private fun isDisplayOn(): Boolean {
+        return try {
+            val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            val display = dm.getDisplay(Display.DEFAULT_DISPLAY)
+            display == null || display.state == Display.STATE_ON
+        } catch (e: Exception) {
+            true
+        }
     }
 
     private fun isScreenOffOrLocked(): Boolean {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        return !powerManager.isInteractive || keyguardManager.isKeyguardLocked
+        return !powerManager.isInteractive || keyguardManager.isKeyguardLocked || !isDisplayOn()
+    }
+
+    private fun scheduleScreenOffPolls() {
+        screenOffCheckHandler.removeCallbacksAndMessages(null)
+        for (delayMs in pollDelays) {
+            screenOffCheckHandler.postDelayed({
+                if (isScreenOffOrLocked() && shouldKillIncognito()) {
+                    executeIncognitoKillNow()
+                }
+            }, delayMs)
+        }
     }
 
     fun updateSecureFlag() {
@@ -314,6 +384,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun abortAndRemoveTaskSilently() {
+        // 1. Finish any open child activities (TabsActivity, SettingsActivity, etc.) first
+        trackedActivities.mapNotNull { it.get() }.forEach { act ->
+            if (act !== this && !act.isFinishing) {
+                try {
+                    act.finish()
+                    act.overridePendingTransition(0, 0)
+                } catch (e: Exception) { }
+            }
+        }
+
+        // 2. Exclude and remove all AppTasks from Recent Apps
         try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             am.appTasks.forEach { task ->
@@ -323,14 +404,12 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        trackedActivities.mapNotNull { it.get() }.forEach { act ->
-            try {
-                if (!act.isFinishing) {
-                    act.finishAndRemoveTask()
-                }
-            } catch (e: Exception) { }
-        }
-        finishAffinity()
+
+        // 3. Move task to back and finish root task (do NOT call finishAffinity() before
+        // finishAndRemoveTask(), as finishAffinity swallows FINISH_TASK_WITH_ROOT_ACTIVITY)
+        try {
+            moveTaskToBack(true)
+        } catch (e: Exception) { }
         finishAndRemoveTask()
         overridePendingTransition(0, 0)
     }
@@ -1124,30 +1203,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ==========================================
-    // INCOGNITO AUTO-KILL (Android 12–16 Safe)
+    // INCOGNITO AUTO-KILL EXECUTION
     // ==========================================
     fun executeIncognitoKillNow() {
-        // Atomically transition false -> true; if already running, still ensure task removal
         if (!isWipingAndKilling.compareAndSet(false, true)) {
             abortAndRemoveTaskSilently()
             return
         }
 
-        screenOffCheckHandler.removeCallbacks(delayedScreenOffCheck)
+        screenOffCheckHandler.removeCallbacksAndMessages(null)
 
-        // Commit persistent flags synchronously so any OS auto-restart upon unlock is immediately aborted
+        // Synchronously persist exit and wipe flags
         prefs.edit()
             .putBoolean("wipe_on_next_launch", true)
             .putBoolean("pending_incognito_exit", true)
             .commit()
 
+        // Immediately clear in-memory tabs even before UI runnable
+        TabManager.resetAllTabs()
+
         runOnUiThread {
             try {
-                // 1. Mask the entire UI immediately so WindowManager cannot snapshot content
                 window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
-                findViewById<View>(android.R.id.content)?.visibility = View.INVISIBLE
+                findViewById<View>(android.R.id.content)?.visibility = View.GONE
 
-                // 2. Wipe WebView state, cookies, DOM storage, SQLite history, and tabs
                 if (this::webView.isInitialized) {
                     webView.visibility = View.GONE
                     webView.stopLoading()
@@ -1168,14 +1247,10 @@ class MainActivity : AppCompatActivity() {
                 if (this::dbHelper.isInitialized) {
                     dbHelper.clearHistory()
                 }
-                TabManager.resetAllTabs()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
 
-            // 3. Remove all AppTasks from Recents and finish all Activities cleanly
-            // Do NOT call Process.killProcess() while STOPPING — let ActivityTaskManagerService
-            // complete the task removal IPC so Android 12–16 never schedules a crash-restart.
             abortAndRemoveTaskSilently()
         }
     }
@@ -1203,7 +1278,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        screenOffCheckHandler.removeCallbacks(delayedScreenOffCheck)
+        // Reset navigation tracking flags on clean foreground resume
+        userLeftViaHomeOrRecents = false
+        isLaunchingInternalActivity = false
+        screenOffCheckHandler.removeCallbacksAndMessages(null)
 
         if (prefs.getBoolean("backup_normal_data", false)) {
             backupNormalCookies()
@@ -1270,13 +1348,19 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        if (shouldKillIncognito()) {
+        if (shouldKillIncognito() && !isChangingConfigurations) {
+            // Instant 0ms Power Button Detection:
+            // If MainActivity stopped WITHOUT onUserLeaveHint() (Home/Recents) and WITHOUT
+            // launching a child Activity (Tabs/Settings/etc.), the Power Button was pressed!
+            if (!userLeftViaHomeOrRecents && !isLaunchingInternalActivity) {
+                executeIncognitoKillNow()
+                return
+            }
+
             if (isScreenOffOrLocked()) {
                 executeIncognitoKillNow()
             } else {
-                // Catch OEMs where PowerManager.isInteractive flips to false 100-250ms after onStop during lock animation
-                screenOffCheckHandler.removeCallbacks(delayedScreenOffCheck)
-                screenOffCheckHandler.postDelayed(delayedScreenOffCheck, 250L)
+                scheduleScreenOffPolls()
             }
         }
     }
@@ -1290,7 +1374,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        screenOffCheckHandler.removeCallbacks(delayedScreenOffCheck)
+        screenOffCheckHandler.removeCallbacksAndMessages(null)
+        try {
+            val dm = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            dm.unregisterDisplayListener(displayListener)
+        } catch (e: Exception) { }
+
         try {
             unregisterReceiver(screenOffReceiver)
         } catch (e: Exception) { }
