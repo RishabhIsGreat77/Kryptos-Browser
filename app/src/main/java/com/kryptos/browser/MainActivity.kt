@@ -80,11 +80,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var downloadDb: DownloadDatabaseHelper
     private lateinit var dockController: DockController
 
-    // Voice Search Variables
     private var speechRecognizer: SpeechRecognizer? = null
     private var voiceSearchDialog: Dialog? = null
-
-    // Cookie Backup Variable
     private val normalCookiesBackup = mutableMapOf<String, String>()
 
     private var customView: View? = null
@@ -986,17 +983,6 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(currentTab.url)
             }
         }
-        override fun onStop() {
-            super.onStop()
-            // Double check if screen is off and incognito kill is enabled
-            val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-            if (!powerManager.isInteractive && prefs.getBoolean("incognito_kill", false)) {
-            // Only trigger if there are active incognito tabs
-            if (TabManager.tabsList.any { it.isIncognito }) {
-                executeIncognitoKill()
-            }
-        }
-    }
 
         val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
         if (isFullscreenEnabled && !isImmersiveMode) {
@@ -1014,6 +1000,19 @@ class MainActivity : AppCompatActivity() {
                 showHomepageUI()
             } else if (webView.url != activeTab.url) {
                 loadUrlOrSearch(activeTab.url)
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        
+        // Double check if screen is off and incognito kill is enabled
+        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        if (!powerManager.isInteractive && prefs.getBoolean("incognito_kill", false)) {
+            // Only trigger if there are active incognito tabs
+            if (TabManager.tabsList.any { it.isIncognito }) {
+                executeIncognitoKill()
             }
         }
     }
