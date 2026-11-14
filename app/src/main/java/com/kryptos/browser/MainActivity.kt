@@ -978,21 +978,45 @@ class MainActivity : AppCompatActivity() {
 
     // STEP 3, 4, 5 & 6 Implementation
     private fun executeIncognitoKillAsync(onComplete: () -> Unit = {}) {
-        if (isWipingAndKilling.getAndSet(true)) return // Atomic Guard
+        if (isWipingAndKilling.getAndSet(true)) return 
 
+        // 1. Set flag to wipe data on next launch
         prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
 
+        // 2. Acquire WakeLock so the CPU doesn't sleep while we clear data
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Kryptos::IncognitoKill")
+        wakeLock.acquire(5000) // 5 seconds max
+
+        // 3. Immediately clear UI so user doesn't see it upon unlocking
+        runOnUiThread {
+            try {
+                addressBar?.setText("")
+                findViewById<View>(R.id.top_bar).visibility = View.GONE
+                findViewById<View>(R.id.content_frame).visibility = View.GONE
+                bottomDock?.visibility = View.GONE
+                homepageContainer?.visibility = View.GONE
+                errorContainer?.visibility = View.GONE
+                
+                // Move app to background immediately
+                moveTaskToBack(true)
+                
+                // Try to remove from recents
+                val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+            } catch (e: Exception) {}
+        }
+
+        // 4. Clear data in background thread
         Thread {
             try {
                 val cookieManager = CookieManager.getInstance()
                 val latch = CountDownLatch(1)
                 
-                // Clear cookies and wait
                 cookieManager.removeAllCookies {
                     cookieManager.flush()
                     latch.countDown()
                 }
-                // 800ms timeout fallback
                 latch.await(800, TimeUnit.MILLISECONDS)
                 
                 WebStorage.getInstance().deleteAllData()
@@ -1000,26 +1024,20 @@ class MainActivity : AppCompatActivity() {
                 TabManager.tabsList.removeAll { it.isIncognito }
             } catch (e: Exception) { 
                 e.printStackTrace() 
+            } finally {
+                if (wakeLock.isHeld) wakeLock.release()
             }
             
             runOnUiThread {
-                killProcessOnDestroy = true // STEP 7
+                killProcessOnDestroy = true
                 try {
-                    // STEP 3: Only appTasks
-                    val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-                } catch (e: Exception) { 
-                    e.printStackTrace() 
-                }
-                
-                // STEP 5: Destroy WebView
-                try {
+                    // Destroy WebView to free memory
                     val parent = webView.parent as? ViewGroup
                     parent?.removeView(webView)
                     webView.destroy()
                 } catch (e: Exception) {}
-                
-                onComplete() // Finish goAsync
+
+                onComplete() 
             }
         }.start()
     }
