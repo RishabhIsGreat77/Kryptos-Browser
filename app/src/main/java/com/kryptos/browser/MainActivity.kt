@@ -995,41 +995,31 @@ class MainActivity : AppCompatActivity() {
     private fun executeIncognitoKillNow() {
         if (!isWipingAndKilling.compareAndSet(false, true)) return
 
-        // 1. Set flag for SplashActivity
+        // 1. Set flag to wipe data on next launch
         prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
 
-        // 2. UI Masking (Hide everything immediately)
+        // 2. Mask the screen (Black screen) so Recents doesn't show the website
         try {
             window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
             if (this::webView.isInitialized) {
-                webView.visibility = View.GONE
+                webView.visibility = View.INVISIBLE
             }
         } catch (e: Exception) {}
 
-        // 3. FORCE REMOVE FROM RECENTS (Must be done synchronously)
+        // 3. FORCE REMOVE FROM RECENTS
         try {
             val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             activityManager.appTasks.forEach { task ->
                 task.setExcludeFromRecents(true)
                 task.finishAndRemoveTask()
             }
+            finishAndRemoveTask()
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        finishAndRemoveTask()
-        moveTaskToBack(true)
 
-        // 4. Clear Data
+        // 4. Clear Data (Cookies, History, Tabs)
         try {
-            if (this::webView.isInitialized) {
-                webView.stopLoading()
-                webView.loadUrl("about:blank")
-                webView.clearHistory()
-                webView.clearFormData()
-                webView.clearCache(true)
-                (webView.parent as? ViewGroup)?.removeView(webView)
-                webView.destroy()
-            }
             val cookieManager = CookieManager.getInstance()
             cookieManager.removeAllCookies { cookieManager.flush() }
             cookieManager.flush()
@@ -1040,11 +1030,11 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // 5. Kill Process after 400ms
+        // 5. Kill process AFTER 500ms so Android gets time to update Recents
         Handler(Looper.getMainLooper()).postDelayed({
             android.os.Process.killProcess(android.os.Process.myPid())
             exitProcess(0)
-        }, 400)
+        }, 500)
     }
 
     override fun onStart() {
@@ -1108,6 +1098,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        // Check if any Incognito tab is open (even in background)
         if (TabManager.hasIncognitoTabs()) {
             window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
             if (this::webView.isInitialized) {
@@ -1116,27 +1107,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        // अगर स्क्रीन बंद हो चुकी है और इनकॉग्निटो टैब एक्टिव है, तो तुरंत किल करो
+        // Trigger kill if screen is turning off and incognito is active
         if (!powerManager.isInteractive && shouldKillIncognito()) {
             executeIncognitoKillNow()
         }
 
         super.onPause()
     }
-    val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-    if (!powerManager.isInteractive && shouldKillIncognito()) {
-        executeIncognitoKillNow()
-    }
-
-        super.onPause()
-    }
-
     override fun onStop() {
         super.onStop()
         
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
 
+        // Check both screen off and lockscreen
         if ((!powerManager.isInteractive || keyguardManager.isKeyguardLocked) && shouldKillIncognito()) {
             executeIncognitoKillNow()
         }
