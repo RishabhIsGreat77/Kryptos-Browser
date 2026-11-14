@@ -10,7 +10,7 @@ object TabManager {
 
     fun addNewTab(url: String, title: String, isIncognito: Boolean = false): Tab {
         val newTab = Tab(
-            id = System.currentTimeMillis().toString(),
+            id = "${System.currentTimeMillis()}_${(100..999).random()}",
             title = title,
             url = url,
             isActive = false,
@@ -43,6 +43,12 @@ object TabManager {
         }
     }
 
+    fun resetAllTabs() {
+        tabsList.clear()
+        activeTabId = null
+        addNewTab("kryptos://home", "Home", false)
+    }
+
     fun getActiveTab(): Tab? {
         return tabsList.find { it.id == activeTabId }
     }
@@ -50,7 +56,7 @@ object TabManager {
     fun setActiveTab(tabId: String) {
         activeTabId = tabId
     }
-    
+
     fun updateActiveTabTitle(title: String, url: String) {
         val active = getActiveTab()
         active?.title = if (title.isEmpty()) "New Tab" else title
