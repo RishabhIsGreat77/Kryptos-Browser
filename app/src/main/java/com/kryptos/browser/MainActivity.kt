@@ -2,8 +2,10 @@ package com.kryptos.browser
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.Dialog
 import android.app.DownloadManager
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -50,9 +52,8 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URLEncoder
 import java.util.Locale
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
 
@@ -93,9 +94,8 @@ class MainActivity : AppCompatActivity() {
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var isImmersiveMode = false
 
-    // Fix: Atomic Guards & Kill Flags
+    // Gemini's Fix: Atomic Boolean for Auto-Kill
     private val isWipingAndKilling = AtomicBoolean(false)
-    private var killProcessOnDestroy = false
 
     private val searchEngines = listOf(
         Pair("Google", "https://www.google.com/search?q="),
@@ -107,15 +107,11 @@ class MainActivity : AppCompatActivity() {
     )
     private var selectedEngineIndex = 0
     
-    // Fix: goAsync for BroadcastReceiver
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_SCREEN_OFF) {
-                if (prefs.getBoolean("incognito_kill", false) && TabManager.tabsList.any { it.isIncognito }) {
-                    val pendingResult = goAsync()
-                    executeIncognitoKillAsync {
-                        pendingResult.finish()
-                    }
+                if (shouldKillIncognito()) {
+                    executeIncognitoKillNow()
                 }
             }
         }
@@ -146,6 +142,9 @@ class MainActivity : AppCompatActivity() {
         btnBookmark = findViewById(R.id.btn_bookmark)
         suggestionsList = findViewById(R.id.suggestions_list)
 
+        // Reset Exclude from Recents on normal launch
+        setTaskExcludedFromRecents(false)
+
         setupSuggestions()
         updateTrackerUI()
         updateTabCountUI()
@@ -173,9 +172,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateSecureFlag() {
-        val isIncognito = TabManager.getActiveTab()?.isIncognito == true
-        if (isIncognito) {
+    private fun shouldKillIncognito(): Boolean {
+        return prefs.getBoolean("incognito_kill", false) && TabManager.hasIncognitoTabs()
+    }
+
+    // Gemini's Fix: Failsafe & Secure Flag logic
+    fun updateSecureFlag() {
+        val hasIncognito = TabManager.hasIncognitoTabs()
+        if (hasIncognito) {
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 setRecentsScreenshotEnabled(false)
@@ -185,6 +189,15 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 setRecentsScreenshotEnabled(true)
             }
+        }
+    }
+
+    private fun setTaskExcludedFromRecents(exclude: Boolean) {
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            am.appTasks.forEach { it.setExcludeFromRecents(exclude) }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -976,75 +989,71 @@ class MainActivity : AppCompatActivity() {
         cookieManager.flush()
     }
 
-    // STEP 3, 4, 5 & 6 Implementation
-    private fun executeIncognitoKillAsync(onComplete: () -> Unit = {}) {
-        if (isWipingAndKilling.getAndSet(true)) return 
+    // ==========================================
+    // INCOGNITO AUTO-KILL (Gemini 3-Stage Pipeline)
+    // ==========================================
+    private fun executeIncognitoKillNow() {
+        if (!isWipingAndKilling.compareAndSet(false, true)) return
 
-        // 1. Set flag to wipe data on next launch
         prefs.edit().putBoolean("wipe_on_next_launch", true).commit()
 
-        // 2. Acquire WakeLock so the CPU doesn't sleep while we clear data
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Kryptos::IncognitoKill")
-        wakeLock.acquire(5000) // 5 seconds max
+        try {
+            if (this::webView.isInitialized) {
+                webView.visibility = View.GONE
+                webView.stopLoading()
+                webView.loadUrl("about:blank")
+                webView.clearHistory()
+                webView.clearFormData()
+                webView.clearCache(true)
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.destroy()
+            }
+        } catch (e: Exception) { e.printStackTrace() }
 
-        // 3. Immediately clear UI so user doesn't see it upon unlocking
-        runOnUiThread {
-            try {
-                addressBar?.setText("")
-                findViewById<View>(R.id.top_bar).visibility = View.GONE
-                findViewById<View>(R.id.content_frame).visibility = View.GONE
-                bottomDock?.visibility = View.GONE
-                homepageContainer?.visibility = View.GONE
-                errorContainer?.visibility = View.GONE
-                
-                // Move app to background immediately
-                moveTaskToBack(true)
-                
-                // Try to remove from recents
-                val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-                activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-            } catch (e: Exception) {}
+        try {
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.removeAllCookies { cookieManager.flush() }
+            cookieManager.flush()
+            WebStorage.getInstance().deleteAllData()
+        } catch (e: Exception) { e.printStackTrace() }
+
+        try {
+            dbHelper.clearHistory()
+            TabManager.clearIncognitoTabs()
+        } catch (e: Exception) { e.printStackTrace() }
+
+        try {
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            activityManager.appTasks.forEach { task ->
+                task.setExcludeFromRecents(true)
+                task.finishAndRemoveTask()
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+        
+        finishAndRemoveTask()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            android.os.Process.killProcess(android.os.Process.myPid())
+            exitProcess(0)
+        }, 400)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (isWipingAndKilling.get()) {
+            finishAndRemoveTask()
+            return
         }
-
-        // 4. Clear data in background thread
-        Thread {
-            try {
-                val cookieManager = CookieManager.getInstance()
-                val latch = CountDownLatch(1)
-                
-                cookieManager.removeAllCookies {
-                    cookieManager.flush()
-                    latch.countDown()
-                }
-                latch.await(800, TimeUnit.MILLISECONDS)
-                
-                WebStorage.getInstance().deleteAllData()
-                dbHelper.clearHistory()
-                TabManager.tabsList.removeAll { it.isIncognito }
-            } catch (e: Exception) { 
-                e.printStackTrace() 
-            } finally {
-                if (wakeLock.isHeld) wakeLock.release()
-            }
-            
-            runOnUiThread {
-                killProcessOnDestroy = true
-                try {
-                    // Destroy WebView to free memory
-                    val parent = webView.parent as? ViewGroup
-                    parent?.removeView(webView)
-                    webView.destroy()
-                } catch (e: Exception) {}
-
-                onComplete() 
-            }
-        }.start()
     }
 
     override fun onResume() {
         super.onResume()
         
+        if (isWipingAndKilling.get()) {
+            finishAndRemoveTask()
+            return
+        }
+
         if (prefs.getBoolean("backup_normal_data", false)) {
             backupNormalCookies()
             clearAllCookies()
@@ -1063,6 +1072,11 @@ class MainActivity : AppCompatActivity() {
                 loadUrlOrSearch(currentTab.url)
             }
         }
+
+        if (this::webView.isInitialized && webView.visibility != View.VISIBLE) {
+            webView.visibility = View.VISIBLE
+        }
+        updateSecureFlag()
 
         val isFullscreenEnabled = prefs.getBoolean("fullscreen_mode", false)
         if (isFullscreenEnabled && !isImmersiveMode) {
@@ -1084,25 +1098,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        if (TabManager.hasIncognitoTabs()) {
+            window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+            if (this::webView.isInitialized) {
+                webView.visibility = View.INVISIBLE
+            }
+        }
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!powerManager.isInteractive && shouldKillIncognito()) {
+            executeIncognitoKillNow()
+        }
+
+        super.onPause()
+    }
+
     override fun onStop() {
         super.onStop()
         
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!powerManager.isInteractive && prefs.getBoolean("incognito_kill", false)) {
-            if (TabManager.tabsList.any { it.isIncognito }) {
-                executeIncognitoKillAsync()
-            }
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+
+        if ((!powerManager.isInteractive || keyguardManager.isKeyguardLocked) && shouldKillIncognito()) {
+            executeIncognitoKillNow()
         }
     }
 
-    // STEP 5: Prevent state saving
     override fun onSaveInstanceState(outState: Bundle) {
-        if (TabManager.getActiveTab()?.isIncognito == true || isWipingAndKilling.get()) {
+        if (TabManager.hasIncognitoTabs() || isWipingAndKilling.get()) {
             outState.clear()
             return
         }
         super.onSaveInstanceState(outState)
     }
+
     override fun onDestroy() {
         try {
             unregisterReceiver(screenOffReceiver)
@@ -1112,15 +1142,13 @@ class MainActivity : AppCompatActivity() {
         speechRecognizer?.destroy()
 
         if (this::webView.isInitialized) {
-            webView.destroy()
+            try {
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.destroy()
+            } catch (e: Exception) {}
         }
         
         super.onDestroy()
-        
-        // STEP 7: Kill process only in onDestroy
-        if (killProcessOnDestroy) {
-            android.os.Process.killProcess(android.os.Process.myPid())
-        }
     }
 
     inner class KryptosWebViewClient : WebViewClient() {
