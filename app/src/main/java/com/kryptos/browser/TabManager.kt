@@ -5,12 +5,10 @@ object TabManager {
     var activeTabId: String? = null
 
     init {
-        // Create a home tab on app start
         addNewTab("kryptos://home", "Home", false)
     }
 
     fun addNewTab(url: String, title: String, isIncognito: Boolean = false): Tab {
-        // FIXED: Used named parameters to prevent mixing up 'isActive' and 'isIncognito'
         val newTab = Tab(
             id = System.currentTimeMillis().toString(),
             title = title,
@@ -26,10 +24,21 @@ object TabManager {
     fun removeTab(tab: Tab) {
         tabsList.remove(tab)
         if (tabsList.isEmpty()) {
-            // If all tabs are closed, create a new home tab
             addNewTab("kryptos://home", "Home", false)
         } else if (activeTabId == tab.id) {
-            // If active tab was closed, set last tab as active
+            activeTabId = tabsList.last().id
+        }
+    }
+
+    fun hasIncognitoTabs(): Boolean {
+        return tabsList.any { it.isIncognito }
+    }
+
+    fun clearIncognitoTabs() {
+        tabsList.removeAll { it.isIncognito }
+        if (tabsList.isEmpty()) {
+            addNewTab("kryptos://home", "Home", false)
+        } else if (tabsList.none { it.id == activeTabId }) {
             activeTabId = tabsList.last().id
         }
     }
@@ -44,7 +53,15 @@ object TabManager {
     
     fun updateActiveTabTitle(title: String, url: String) {
         val active = getActiveTab()
-        active?.title = if (title.isNullOrEmpty()) "New Tab" else title
+        active?.title = if (title.isEmpty()) "New Tab" else title
         active?.url = url
     }
 }
+
+data class Tab(
+    val id: String,
+    var title: String,
+    var url: String,
+    var isActive: Boolean = false,
+    var isIncognito: Boolean = false
+)
