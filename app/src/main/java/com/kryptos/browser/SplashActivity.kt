@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 
@@ -26,22 +27,29 @@ class SplashActivity : AppCompatActivity() {
         // Wipe data if Incognito Auto-Kill was triggered
         if (prefs.getBoolean("wipe_on_next_launch", false)) {
             try {
-                // Clear Cookies
+                // 1. Initialize a dummy WebView to activate the data directory
+                val tempWebView = WebView(this)
+                tempWebView.clearCache(true)
+                
+                // 2. Clear Cookies
                 val cookieManager = CookieManager.getInstance()
                 cookieManager.removeAllCookies { cookieManager.flush() }
                 
-                // Clear LocalStorage & WebStorage
+                // 3. Clear LocalStorage & WebStorage
                 WebStorage.getInstance().deleteAllData()
                 
-                // Clear History DB
+                // 4. Clear History DB
                 val dbHelper = HistoryDatabaseHelper(this)
                 dbHelper.clearHistory()
                 
-                // Clear Incognito Tabs
+                // 5. Clear Incognito Tabs
                 TabManager.tabsList.removeAll { it.isIncognito }
                 
-                // Reset the flag
-                prefs.edit().putBoolean("wipe_on_next_launch", false).apply()
+                // 6. Destroy temp WebView
+                tempWebView.destroy()
+                
+                // 7. Reset the flag using commit()
+                prefs.edit().putBoolean("wipe_on_next_launch", false).commit()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
