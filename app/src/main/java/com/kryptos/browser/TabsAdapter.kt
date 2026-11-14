@@ -6,16 +6,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-// 1. Tab Data Class (Added isIncognito flag)
-data class Tab(
-    val id: String,
-    var title: String,
-    var url: String,
-    var isActive: Boolean = false,
-    var isIncognito: Boolean = false
-)
-
-// 2. TabsAdapter (Jo list ko grid me dikhayega)
 class TabsAdapter(
     private var tabs: MutableList<Tab>,
     private val onTabClick: (Tab) -> Unit,
@@ -38,16 +28,12 @@ class TabsAdapter(
         holder.title.text = if (tab.title.isNullOrEmpty()) "New Tab" else tab.title
         holder.url.text = tab.url
 
-        // Tab par click karne se switch hoga
         holder.itemView.setOnClickListener { onTabClick(tab) }
-        
-        // X par click karne se tab close hoga
         holder.btnClose.setOnClickListener { onTabClose(tab) }
     }
 
     override fun getItemCount(): Int = tabs.size
 
-    // Jab bhi tab list update ho, ise call karenge
     fun updateTabs(newTabs: MutableList<Tab>) {
         tabs = newTabs
         notifyDataSetChanged()
