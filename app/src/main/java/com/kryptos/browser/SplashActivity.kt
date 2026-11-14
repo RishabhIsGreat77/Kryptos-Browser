@@ -48,7 +48,7 @@ class SplashActivity : AppCompatActivity() {
                 // 6. Destroy temp WebView
                 tempWebView.destroy()
                 
-                // 7. Reset the flag using commit()
+                // 7. Reset the flag using commit() to ensure it saves immediately
                 prefs.edit().putBoolean("wipe_on_next_launch", false).commit()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -56,7 +56,10 @@ class SplashActivity : AppCompatActivity() {
         }
 
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, MainActivity::class.java))
+            val intent = Intent(this, MainActivity::class.java)
+            // Ensure MainActivity is the root of the task
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
             finish()
         }, 1500)
     }
